@@ -1,0 +1,301 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-01-06T08:37:37.665Z",
+  "video_info": {
+    "duration": 15,
+    "filename": "Strepsils Vitamin C, 2 Manfaat Dalam 1 Permen.mp4",
+    "fps": 25,
+    "height": 720,
+    "path": "downloaded_videos\\Strepsils Vitamin C, 2 Manfaat Dalam 1 Permen.mp4",
+    "total_frames": 375,
+    "width": 1280
+  },
+  "scenes": [
+    {
+      "end_frame": 44,
+      "name": "Scene 1 Aktris Menyapa",
+      "rois": [
+        {
+          "angle": 0,
+          "height": 297,
+          "label": "Aktris",
+          "width": 485,
+          "x": 86,
+          "y": 24
+        }
+      ],
+      "start_frame": 0
+    },
+    {
+      "end_frame": 69,
+      "name": "Scene 2 Aktris akan Duduk",
+      "rois": [
+        {
+          "angle": 0,
+          "height": 418,
+          "label": "Aktris",
+          "width": 501,
+          "x": 383,
+          "y": 142
+        }
+      ],
+      "start_frame": 45
+    },
+    {
+      "end_frame": 93,
+      "name": "Scene 3 Aktris Duduk",
+      "rois": [
+        {
+          "angle": 0,
+          "height": 709,
+          "label": "Figuran 2",
+          "width": 413,
+          "x": 1,
+          "y": 4
+        },
+        {
+          "angle": 0,
+          "height": 709,
+          "label": "Figuran 1",
+          "width": 327,
+          "x": 945,
+          "y": 4
+        },
+        {
+          "angle": 0,
+          "height": 596,
+          "label": "Aktris",
+          "width": 460,
+          "x": 432,
+          "y": 116
+        }
+      ],
+      "start_frame": 70
+    },
+    {
+      "end_frame": 124,
+      "name": "Scene 4 Aktris Memandang Kamera",
+      "rois": [
+        {
+          "angle": 0,
+          "height": 644,
+          "label": "Aktris",
+          "width": 381,
+          "x": 458,
+          "y": 66
+        },
+        {
+          "angle": 0,
+          "height": 404,
+          "label": "Figuran 1",
+          "width": 262,
+          "x": 111,
+          "y": 182
+        },
+        {
+          "angle": 0,
+          "height": 433,
+          "label": "Figuran 2",
+          "width": 254,
+          "x": 864,
+          "y": 153
+        }
+      ],
+      "start_frame": 94
+    },
+    {
+      "end_frame": 144,
+      "name": "Scene 5 Perkenalan Produk",
+      "rois": [
+        {
+          "angle": 0,
+          "height": 511,
+          "label": "Produk",
+          "width": 625,
+          "x": 54,
+          "y": 116
+        },
+        {
+          "angle": 0,
+          "height": 607,
+          "label": "Maskot",
+          "width": 397,
+          "x": 717,
+          "y": 64
+        }
+      ],
+      "start_frame": 125
+    },
+    {
+      "end_frame": 171,
+      "name": "Scene 6 Perkenalan Produk 2",
+      "rois": [
+        {
+          "angle": 0,
+          "height": 564,
+          "label": "Maskot",
+          "width": 451,
+          "x": 733,
+          "y": 41
+        },
+        {
+          "angle": 0,
+          "height": 468,
+          "label": "Produk",
+          "width": 739,
+          "x": 104,
+          "y": 63
+        }
+      ],
+      "start_frame": 145
+    },
+    {
+      "end_frame": 210,
+      "name": "Scene 7 Aktris Konsumsi Produk",
+      "rois": [
+        {
+          "angle": 0,
+          "height": 291,
+          "label": "ROI",
+          "width": 309,
+          "x": 487,
+          "y": 282
+        }
+      ],
+      "start_frame": 172
+    },
+    {
+      "end_frame": 223,
+      "name": "Scene 8 Detil Produk 1",
+      "rois": [
+        {
+          "angle": 0,
+          "height": 68,
+          "label": "Logo",
+          "width": 278,
+          "x": 116,
+          "y": 50
+        },
+        {
+          "angle": 0,
+          "height": 187,
+          "label": "Bola",
+          "width": 285,
+          "x": 257,
+          "y": 143
+        }
+      ],
+      "start_frame": 211
+    },
+    {
+      "end_frame": 295,
+      "name": "Scene 9 Detil Produk 2",
+      "rois": [
+        {
+          "angle": 0,
+          "height": 171,
+          "label": "Bola",
+          "width": 200,
+          "x": 316,
+          "y": 150
+        },
+        {
+          "angle": 0,
+          "height": 51,
+          "label": "Vitamin C",
+          "width": 202,
+          "x": 252,
+          "y": 321
+        },
+        {
+          "angle": 0,
+          "height": 60,
+          "label": "Legakan tenggorokan",
+          "width": 401,
+          "x": 438,
+          "y": 63
+        },
+        {
+          "angle": 0,
+          "height": 73,
+          "label": "Logo",
+          "width": 276,
+          "x": 115,
+          "y": 50
+        },
+        {
+          "angle": 0,
+          "height": 114,
+          "label": "Komposisi",
+          "width": 378,
+          "x": 171,
+          "y": 499
+        },
+        {
+          "angle": 0,
+          "height": 327,
+          "label": "Bola",
+          "width": 331,
+          "x": 477,
+          "y": 199
+        },
+        {
+          "angle": 0,
+          "height": 176,
+          "label": "Double Active Agents",
+          "width": 371,
+          "x": 832,
+          "y": 308
+        }
+      ],
+      "start_frame": 224
+    },
+    {
+      "end_frame": 348,
+      "name": "Scene 10 Detil Produk 3",
+      "rois": [
+        {
+          "angle": 0,
+          "height": 51,
+          "label": "Legakan tenggorokan",
+          "width": 754,
+          "x": 57,
+          "y": 31
+        },
+        {
+          "angle": 0,
+          "height": 486,
+          "label": "Produk",
+          "width": 733,
+          "x": 82,
+          "y": 117
+        },
+        {
+          "angle": 0,
+          "height": 538,
+          "label": "Maskot",
+          "width": 435,
+          "x": 818,
+          "y": 89
+        },
+        {
+          "angle": 0,
+          "height": 59,
+          "label": "Logo",
+          "width": 219,
+          "x": 841,
+          "y": 632
+        }
+      ],
+      "start_frame": 296
+    },
+    {
+      "end_frame": 374,
+      "name": "Scene 11 Ending",
+      "rois": [],
+      "start_frame": 349
+    }
+  ],
+  "youtube_url": "",
+  "last_updated": "2026-01-06T15:37:37.668668"
+}

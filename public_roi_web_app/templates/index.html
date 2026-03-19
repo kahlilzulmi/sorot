@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video ROI Analyzer - Web Edition</title>
+    
+    <!-- Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+{% raw %}
+    <div id="app">
+        <!-- Mode Selection Screen -->
+        <div v-if="appMode === 'select'" class="mode-selector-overlay">
+            <div class="mode-selector-container">
+                <div class="mode-selector-header">
+                    <h1>📹 Video ROI Analyzer</h1>
+                    <p>Choose your analysis workflow</p>
+                </div>
+                
+                <div class="mode-cards">
+                    <div class="mode-card" @click="selectMode('live')">
+                        <div class="mode-icon">🔴</div>
+                        <h2>Live Recording</h2>
+                        <p class="mode-description">Record new eye tracking session in real-time</p>
+                        <ul class="mode-features">
+                            <li>✓ Define ROIs before recording</li>
+                            <li>✓ Real-time gaze capture</li>
+                            <li>✓ OBS or Mouse tracking</li>
+                            <li>✓ Immediate analysis</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mode-card" @click="selectMode('import')">
+                        <div class="mode-icon">📁</div>
+                        <h2>Import & Analyze</h2>
+                        <p class="mode-description">Analyze existing gaze data retroactively</p>
+                        <ul class="mode-features">
+                            <li>✓ Upload CSV gaze coordinates</li>
+                            <li>✓ Define ROIs post-recording</li>
+                            <li>✓ Frame offset support</li>
+                            <li>✓ Reprocess old data</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Application (shown when mode is selected) -->
+        <div v-show="appMode !== 'select'">
+        
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <button v-if="appMode !== 'select'" @click="backToModeSelect()" class="btn btn-secondary btn-sm" style="margin-right: 15px;" title="Back to mode selection">
+                    <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+                </button>
+                <div class="header-title">
+                    <h1><i data-lucide="video" style="width: 20px; height: 20px; vertical-align: middle;"></i> Video ROI Analyzer</h1>
+                    <p v-if="appMode === 'live'"><i data-lucide="circle-dot" style="width: 14px; height: 14px; vertical-align: middle;"></i> Live Recording Mode</p>
+                    <p v-if="appMode === 'import'"><i data-lucide="folder-open" style="width: 14px; height: 14px; vertical-align: middle;"></i> Import & Analyze Mode</p>
+                    <p v-if="appMode === 'select'">Web-based eye tracking analysis tool</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <button @click="canOpenModal() && (showNewVideoModal = true)" class="btn btn-primary btn-sm" :disabled="showProgressModal && !progressComplete && !progressError">
+                    <i data-lucide="plus" style="width: 16px; height: 16px;"></i> New
+                </button>
+                <button @click="canOpenModal() && $refs.loadInput.click()" class="btn btn-secondary btn-sm" :disabled="showProgressModal && !progressComplete && !progressError">
+                    <i data-lucide="folder-open" style="width: 16px; height: 16px;"></i> Load
+                </button>
+                <button @click="saveWorkspace" class="btn btn-secondary btn-sm" :disabled="!videoInfo">
+                    <i data-lucide="save" style="width: 16px; height: 16px;"></i> Save
+                </button>
+                <button @click="openSaveAsModal" class="btn btn-secondary btn-sm" :disabled="!videoInfo">
+                    <i data-lucide="save-all" style="width: 16px; height: 16px;"></i> Save As...
+                </button>
+                <button @click="openExportModal" class="btn btn-secondary btn-sm" :disabled="!videoInfo || scenes.length === 0" title="Export scenes and ROIs to CSV/JSON">
+                    <i data-lucide="file-text" style="width: 16px; height: 16px;"></i> Export Data
+                </button>
+                <div class="btn-divider"></div>
+                <button v-if="appMode === 'live'" @click="canOpenModal() && openRecordModal()" class="btn btn-danger btn-sm" :disabled="!videoInfo || recording || (showProgressModal && !progressComplete && !progressError)">
+                    <i data-lucide="circle" style="width: 16px; height: 16px;"></i> Record
+                </button>
+                <button v-if="appMode === 'live'" @click="canOpenModal() && (showProcessModal = true)" class="btn btn-info btn-sm" :disabled="!sessionDir || (showProgressModal && !progressComplete && !progressError)">
+                    <i data-lucide="settings" style="width: 16px; height: 16px;"></i> Post-process
+                </button>
+                <button v-if="appMode === 'import'" @click="generateReportsFromImport" class="btn btn-success btn-sm" :disabled="!videoInfo || scenes.length === 0 || !importedGazeData">
+                    <i data-lucide="bar-chart-3" style="width: 16px; height: 16px;"></i> Generate Reports
+                </button>
+                <button v-if="appMode === 'import' && importedGazeVideoFile" @click="videoMode = videoMode === 'single' ? 'dual' : 'single'" class="btn btn-info btn-sm" :title="videoMode === 'single' ? 'Switch to dual video' : 'Switch to single video'">
+                    <i data-lucide="monitor" style="width: 16px; height: 16px;"></i> {{ videoMode === 'single' ? 'Dual Video' : 'Single Video' }}
+                </button>
+                <a v-if="appMode === 'live'" href="/test-gaze" class="btn btn-secondary btn-sm">
+                    <i data-lucide="eye" style="width: 16px; height: 16px;"></i> Test Eye Gaze
+                </a>
+
+            </div>
+            <input type="file" ref="loadInput" @change="importWorkspace" accept=".json" style="display:none">
+        </header>
+        
+        <!-- Main Container -->
+        <div class="container">
+            
+            <!-- Left Sidebar: Scenes -->
+            <div class="left-sidebar">
+                <div class="editor-section">
+                    <h2><i data-lucide="clapperboard" style="width: 18px; height: 18px; vertical-align: middle;"></i> Scenes</h2>
+                    
+                    <TransitionGroup name="list" tag="div" class="scene-list">
+                        <div 
+                            v-for="(scene, idx) in scenes" 
+                            :key="idx"
+                            :class="['scene-item', { active: activeSceneIdx === idx }]"
+                            @click="selectScene(idx)"
+                            @contextmenu.prevent="toggleSceneMenu(idx)"
+                        >
+                            <!-- Scene Title (Top) -->
+                            <div class="scene-header">
+                                <div v-if="editingSceneIdx === idx" @click.stop class="scene-title-edit">
+                                    <strong>{{ scene.name }}</strong> - 
+                                    <input 
+                                        :id="'scene-input-' + idx"
+                                        v-model="editingCustomName"
+                                        @blur="finishRenameScene(idx)"
+                                        @keydown.enter.prevent="finishRenameScene(idx)"
+                                        @keydown.esc="cancelRenameScene"
+                                        class="inline-edit-input"
+                                        type="text"
+                                        placeholder="Custom name"
+                                        style="width: 140px;"
+                                    >
+                                </div>
+                                <div v-else @dblclick.stop="startRenameScene(idx)" class="scene-title" style="cursor: pointer;">
+                                    <strong>{{ scene.name }}</strong>
+                                    <span v-if="scene.custom_name"> - {{ scene.custom_name }}</span>
+                                    <span v-else style="color: #999;"> - (no custom name)</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Scene Body (Info Left, Thumbnail Right) -->
+                            <div class="scene-body">
+                                <!-- Scene Thumbnail (Left) -->
+                                <div class="scene-thumbnail" v-if="videoInfo">
+                                    <img 
+                                        :key="'thumb-' + idx + '-' + scene.start_frame"
+                                        :src="getSceneThumbnailUrl(scene.start_frame)" 
+                                        :alt="'Scene ' + (idx + 1) + ' thumbnail'"
+                                        @error="handleThumbnailError"
+                                    />
+                                </div>
+                                
+                                <!-- Scene Info (Right) -->
+                                <div class="scene-info">
+                                    <div class="scene-details">
+                                        <small><strong>Frame:</strong> {{ scene.start_frame }} - {{ scene.end_frame }}</small><br>
+                                        <small><strong>Time:</strong> {{ frameToTime(scene.start_frame) }} - {{ frameToTime(scene.end_frame) }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Dropdown Menu -->
+                            <div v-if="openSceneMenu === idx" class="scene-dropdown-menu" @click.stop>
+                                <button @click="startRenameScene(idx); closeAllMenus()" class="menu-item">✏️ Edit Custom Name</button>
+                                <button @click="deleteScene(idx); closeAllMenus()" class="menu-item menu-delete">🗑️ Delete</button>
+                            </div>
+                        </div>
+                    </TransitionGroup>
+                </div>
+            </div>
+            
+            <!-- Center Panel: Video Player -->
+            <div class="center-panel">
+                <div class="video-section">
+                    <!-- Modal for New Video -->
+                    <div v-if="showNewVideoModal" class="modal-overlay" @click.self="showNewVideoModal = false">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h2>New Video Project</h2>
+                                <button @click="showNewVideoModal = false" class="btn-close">✕</button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="input-group">
+                                    <input type="file" ref="fileInput" @change="uploadVideo" accept="video/*" style="display:none">
+                                    <button @click="$refs.fileInput.click()" class="btn btn-primary btn-block">
+                                        Upload Video File
+                                    </button>
+                                </div>
+                                
+                                <div class="divider"><span>OR</span></div>
+
+                                <div style="text-align: center;"><p>Download from YouTube</p>
+                                <br></div>
+                                
+                                <div class="input-group">
+                                    <input v-model="youtubeUrl" type="text" placeholder="https://youtube.com/watch?v=..." class="input-text">
+                                </div>
+                                <div>
+                                    <button @click="downloadYoutube" class="btn btn-secondary btn-block" :disabled="downloading">
+                                        <span v-if="downloading">⏳ Downloading...</span>
+                                        <span v-else>Download</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Modal for Import Gaze Data -->
+                    <div v-if="showImportModal" class="modal-overlay" @click.self="showImportModal = false">
+                        <div class="modal-content modal-large">
+                            <div class="modal-header">
+                                <h2>📁 Import Gaze Data</h2>
+                                <button @click="showImportModal = false" class="btn-close">✕</button>
+                            </div>
+                            <div class="modal-body">
+                                <p style="margin-bottom: 20px; color: #666;">
+                                    Import existing gaze coordinate data (CSV) and define ROIs retroactively.
+                                </p>
+                                
+                                <!-- Step 1: Upload CSV -->
+                                <div class="import-step">
+                                    <h3>Step 1: Upload Gaze Data CSV</h3>
+                                    <div class="input-group">
+                                        <label>
+                                            <strong>Select your gaze data CSV file</strong>
+                                            <br><small style="color: #666;">Any CSV format with frame number and gaze coordinates</small>
+                                        </label>
+                                        <input type="file" ref="gazeCSVInput" @change="selectGazeCSV" accept=".csv" style="display:none">
+                                        <button @click="$refs.gazeCSVInput.click()" class="btn btn-primary">
+                                            📄 Choose CSV File
+                                        </button>
+                                        <span v-if="importedGazeFile" style="margin-left: 10px; color: #28a745;">
+                                            ✓ {{ importedGazeFile.name }}
+                                        </span>
+                                    </div>
+                                    
+                                    <!-- Column Mapping UI -->
+                                    <div v-if="csvHeaders.length > 0" style="margin-top: 20px; padding: 15px; background: white; border-radius: 6px; border: 2px solid #007bff;">
+                                        <h4 style="margin: 0 0 15px 0; color: #007bff; font-size: 14px;">🔗 Map CSV Columns</h4>
+                                        <div style="display: grid; grid-template-columns: 150px 1fr; gap: 10px; align-items: center;">
+                                            <label><strong>Frame Number:</strong></label>
+                                            <select v-model.number="columnMapping.frame" @change="updateCSVPreview" class="input-text">
+                                                <option v-for="(header, idx) in csvHeaders" :key="idx" :value="idx">
+                                                    {{ header }} (Column {{ idx + 1 }})
+                                                </option>
+                                            </select>
+                                            
+                                            <label><strong>Gaze X:</strong></label>
+                                            <select v-model.number="columnMapping.gazeX" @change="updateCSVPreview" class="input-text">
+                                                <option v-for="(header, idx) in csvHeaders" :key="idx" :value="idx">
+                                                    {{ header }} (Column {{ idx + 1 }})
+                                                </option>
+                                            </select>
+                                            
+                                            <label><strong>Gaze Y:</strong></label>
+                                            <select v-model.number="columnMapping.gazeY" @change="updateCSVPreview" class="input-text">
+                                                <option v-for="(header, idx) in csvHeaders" :key="idx" :value="idx">
+                                                    {{ header }} (Column {{ idx + 1 }})
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Step 2: Upload Video -->
+                                <div class="import-step">
+                                    <h3>Step 2: Upload Original Video</h3>
+                                    <div class="input-group">
+                                        <label><strong>Stimulus video file for visualization and ROI definition</strong></label>
+                                        <input type="file" ref="importVideoInput" @change="selectImportVideo" accept="video/*" style="display:none">
+                                        <button @click="$refs.importVideoInput.click()" class="btn btn-primary">
+                                            🎬 Choose Video File
+                                        </button>
+                                        <span v-if="importedVideoFile" style="margin-left: 10px; color: #28a745;">
+                                            ✓ {{ importedVideoFile.name }}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Step 3: Note about offset -->
+                                <div class="import-step" v-if="importedGazeVideoFile">
+                                    <h3>Step 3: Frame Synchronization</h3>
+                                    <div style="padding: 12px; background: #e8f4fd; border-radius: 6px; border-left: 4px solid #17a2b8;">
+                                        <strong>ℹ️ Adjust frame offset in Dual Video mode</strong>
+                                        <p style="margin: 8px 0 0 0; font-size: 13px; color: #555;">
+                                            After importing, use the dual-video interface to visually adjust frame synchronization between stimulus and eye gaze videos.
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Preview Info -->
+                                <div v-if="importPreviewData" class="import-preview">
+                                    <h3>📊 Data Preview</h3>
+                                    <div class="preview-stats">
+                                        <div class="stat-item">
+                                            <strong>Total Frames:</strong> {{ importPreviewData.total_frames }}
+                                        </div>
+                                        <div class="stat-item">
+                                            <strong>Valid Gaze Points:</strong> {{ importPreviewData.valid_points }}
+                                        </div>
+                                        <div class="stat-item">
+                                            <strong>Detection Rate:</strong> {{ importPreviewData.detection_rate }}%
+                                        </div>
+                                        <div v-if="importPreviewData.invalid_rows > 0" class="stat-item" style="background: #fff3cd; border-left: 3px solid #ffc107;">
+                                            <strong>⚠️ Skipped Rows:</strong> {{ importPreviewData.invalid_rows }}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Action Buttons -->
+                                <div class="modal-actions">
+                                    <button @click="showImportModal = false" class="btn btn-secondary">
+                                        Cancel
+                                    </button>
+                                    <button @click="processImportedData" class="btn btn-primary" :disabled="!importedGazeFile || !importedVideoFile">
+                                        ✓ Load & Analyze
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Modal for Record Disclaimer -->
+                    <div v-if="showRecordModal" class="modal-overlay" @click.self="showRecordModal = false">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h2>🔴 Start Recording</h2>
+                                <button @click="showRecordModal = false" class="btn-close">✕</button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- Device Status Check -->
+                                <div class="device-status-section">
+                                    <h3>📊 Device & Software Status</h3>
+                                    <div class="device-status-card" :class="useMouseFallback ? 'status-warning' : 'status-success'">
+                                        <div class="status-header">
+                                            <strong v-if="!useMouseFallback">✅ Eye Tracking Mode</strong>
+                                            <strong v-else>⚠️ Mouse Tracking Mode (Fallback)</strong>
+                                        </div>
+                                        
+                                        <div class="status-details">
+                                            <div v-if="!useMouseFallback" class="status-list">
+                                                <div class="status-item">
+                                                    <span class="status-icon">🎥</span>
+                                                    <span><strong>OBS Studio:</strong> Connected & Ready</span>
+                                                </div>
+                                                <div class="status-item">
+                                                    <span class="status-icon">👁️</span>
+                                                    <span><strong>Eye Tracker:</strong> OBS Virtual Camera</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div v-else class="status-list">
+                                                <div class="status-item">
+                                                    <span class="status-icon">❌</span>
+                                                    <span><strong>OBS Studio:</strong> Not detected</span>
+                                                </div>
+                                                <div class="status-item">
+                                                    <span class="status-icon">🖱️</span>
+                                                    <span><strong>Tracking Device:</strong> Mouse cursor</span>
+                                                </div>
+                                                <div v-if="useMouseFallback" class="status-warning-notice">
+                                                    ⚠️ Move your mouse to simulate gaze during recording
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Recording Instructions -->
+                                <div class="recording-instructions-section">
+                                    <h3>📋 Recording Instructions</h3>
+                                    <div class="instructions-list">
+                                        <div v-if="!useMouseFallback" class="instruction-item">
+                                            <span class="instruction-bullet">1</span>
+                                            <span>Eye tracker must be active and camera index set correctly</span>
+                                        </div>
+                                        <div v-if="!useMouseFallback" class="instruction-item">
+                                            <span class="instruction-bullet">2</span>
+                                            <span>OBS must be running with virtual camera enabled</span>
+                                        </div>
+                                        <div v-if="useMouseFallback" class="instruction-item">
+                                            <span class="instruction-bullet">1</span>
+                                            <span>Use your mouse to point at areas you want to "look" at</span>
+                                        </div>
+                                        <div v-if="useMouseFallback" class="instruction-item">
+                                            <span class="instruction-bullet">2</span>
+                                            <span>Keep mouse inside video area during recording</span>
+                                        </div>
+                                        <div class="instruction-item">
+                                            <span class="instruction-bullet">{{ useMouseFallback ? '3' : '3' }}</span>
+                                            <span>Video will play in fullscreen mode</span>
+                                        </div>
+                                        <div class="instruction-item">
+                                            <span class="instruction-bullet">{{ useMouseFallback ? '4' : '4' }}</span>
+                                            <span>Press <strong>"MULAI"</strong> button to begin playback</span>
+                                        </div>
+                                        <div class="instruction-item">
+                                            <span class="instruction-bullet">{{ useMouseFallback ? '5' : '5' }}</span>
+                                            <span>Recording will auto-stop at video end</span>
+                                        </div>
+                                        <div class="instruction-item">
+                                            <span class="instruction-bullet">{{ useMouseFallback ? '6' : '6' }}</span>
+                                            <span>Gaze data is saved to <code>sessions/</code> folder</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="modal-actions">
+                                    <button @click="showRecordModal = false; startRecording()" class="btn btn-danger btn-primary-action">
+                                        🔴 Start Recording
+                                    </button>
+                                    <button @click="showRecordModal = false" class="btn btn-secondary btn-cancel">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Modal for Post-processing -->
+                    <div v-if="showProcessModal" class="modal-overlay" @click.self="showProcessModal = false">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h2>⚙️ Post-processing Options</h2>
+                                <button @click="showProcessModal = false" class="btn-close">✕</button>
+                            </div>
+                            <div class="modal-body">
+                                <div v-if="!sessionDir" class="info-box">
+                                    <p>⚠️ No recording session available. Please complete a recording first.</p>
+                                </div>
+                                <div v-else>
+                                    <p><strong>Available processing options:</strong></p>
+                                    
+                                    <div class="process-option">
+                                        <h4>🔥 Generate Heatmaps</h4>
+                                        <p>Creates visual heatmaps showing gaze concentration areas for each scene</p>
+                                        <button @click="generateHeatmaps(); showProcessModal = false" class="btn btn-secondary btn-block" :disabled="processing">
+                                            Generate Heatmaps
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="process-option">
+                                        <h4>📊 ROI Statistics</h4>
+                                        <p>Calculates fixation counts and durations for each Region of Interest</p>
+                                        <button @click="generateROIStats(); showProcessModal = false" class="btn btn-secondary btn-block" :disabled="processing">
+                                            Generate Statistics
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="process-option">
+                                        <h4>🎬 Overlay Video</h4>
+                                        <p>Creates video with gaze overlay and ROI boundaries visualization</p>
+                                        <button @click="generateOverlayVideo(); showProcessModal = false" class="btn btn-secondary btn-block" :disabled="processing">
+                                            Generate Overlay Video
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="process-option">
+                                        <h4>🔥 Heatmap Overlay Videos</h4>
+                                        <p>Creates per-scene videos with transparent heatmap overlay on original video</p>
+                                        <button @click="createOverlayHeatmapVideo(); showProcessModal = false" class="btn btn-secondary btn-block" :disabled="processing">
+                                            Generate Heatmap Overlay Videos
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="process-option process-all">
+                                        <button @click="processAll(); showProcessModal = false" class="btn btn-primary btn-large" :disabled="processing">
+                                            ⚡ Process All (Recommended)
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div v-if="processing" class="processing-status">
+                                    <p><strong>{{ processingStatus }}</strong></p>
+                                    <div class="spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal for Recording Progress -->
+                    <div v-if="showProgressModal" class="modal-overlay modal-progress" @click.self="closeProgressModal">
+                        <div class="modal-content modal-small">
+                            <div class="modal-header">
+                                <h2 v-if="!progressComplete">⏳ Processing Recording</h2>
+                                <h2 v-else>✅ Done Processing</h2>
+                            </div>
+                            <div class="modal-body">
+                                <p v-if="!progressComplete" class="progress-message">{{ progressMessage }}</p>
+                                <div class="progress-steps">
+                                    <div v-for="step in progressSteps" :key="step.key" class="progress-step">
+                                        <span :class="['status-dot', step.status]"></span>
+                                        <span class="progress-step-label">{{ step.label }}</span>
+                                        <span class="progress-step-status">{{ progressStatusLabel(step.status) }}</span>
+                                    </div>
+                                </div>
+
+                                <div v-if="progressError" class="error-box">{{ progressError }}</div>
+                                <div v-if="progressComplete && !progressError" class="success-box">
+                                    All processing steps completed successfully. Recording data is ready for analysis.
+                                </div>
+
+                                <div class="modal-actions" v-if="progressComplete || progressError">
+                                    <button class="btn btn-primary btn-block btn-center" @click="closeProgressModal">Close</button>
+                                </div>
+                                <div class="modal-actions" v-else>
+                                    <div class="spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Video Player -->
+                    <div v-if="videoInfo" class="video-container" :class="{ 'dual-video-mode': videoMode === 'dual' && appMode === 'import' && importedGazeVideoFile }">
+                        <!-- Video Header -->
+                        <div class="video-header">
+                            <div class="video-title">
+                                <strong>{{ videoInfo.filename }}</strong>
+                                <span v-if="videoMode === 'dual' && appMode === 'import'" style="margin-left: 10px; color: #17a2b8; font-size: 12px;">
+                                    📺 Dual Video Mode
+                                </span>
+                            </div>
+                            <div class="video-meta">
+                                {{ videoInfo.width }}x{{ videoInfo.height }} @ {{ videoInfo.fps.toFixed(2) }} FPS
+                            </div>
+                        </div>
+                        
+                        <!-- Single Video Mode -->
+                        <div v-if="videoMode === 'single' || appMode === 'live' || !importedGazeVideoFile" class="canvas-wrapper">
+                            <video 
+                                ref="videoPlayer"
+                                :src="videoSrc"
+                                @loadedmetadata="onVideoLoaded"
+                                @timeupdate="onTimeUpdate"
+                                crossorigin="anonymous"
+                            ></video>
+                            
+                            <!-- Canvas overlay for ROI drawing -->
+                            <canvas 
+                                ref="roiCanvas"
+                                @mousedown="startDrawROI"
+                                @mousemove="drawingROI"
+                                @mouseup="endDrawROI"
+                                :class="['roi-canvas', { 'roi-disabled': recording || showRecordingOverlay }]"
+                            ></canvas>
+                            
+                            <!-- Mouse tracking indicator for fallback mode -->
+                            <div v-if="recording && useMouseFallback" 
+                                 class="mouse-gaze-indicator"
+                                 :style="{
+                                     left: (lastMouseX / videoInfo.width * 100) + '%',
+                                     top: (lastMouseY / videoInfo.height * 100) + '%'
+                                 }">
+                            </div>
+                            
+                            <!-- Fullscreen Recording Overlay -->
+                            <div v-if="showRecordingOverlay" class="recording-overlay">
+                                <button @click="startPlaybackAndRecording" class="btn-start-recording">
+                                    <div v-if="!useMouseFallback">
+                                        🎥 MULAI<br>
+                                        <small style="font-size: 14px; opacity: 0.9;">Eye Tracking Mode</small>
+                                    </div>
+                                    <div v-else>
+                                        🖱️ MULAI<br>
+                                        <small style="font-size: 14px; opacity: 0.9;">Mouse Tracking Mode</small>
+                                    </div>
+                                </button>
+                                <div v-if="useMouseFallback" style="position: absolute; bottom: 20px; text-align: center; width: 100%; color: #ffc107; font-size: 18px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
+                                    ⚠️ Move your mouse to simulate gaze position
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Dual Video Mode (Import only) -->
+                        <div v-if="videoMode === 'dual' && appMode === 'import' && importedGazeVideoFile" class="dual-video-wrapper">
+                            <!-- Frame Offset Control Panel -->
+                            <div class="offset-control-panel">
+                                <div class="offset-label">⚙️ Frame Synchronization</div>
+                                <div class="offset-controls">
+                                    <button @click="adjustOffset(-10)" class="btn-offset" title="-10 frames">⏪</button>
+                                    <button @click="adjustOffset(-1)" class="btn-offset" title="-1 frame">◀</button>
+                                    <div class="offset-display">
+                                        <label style="font-size: 11px; color: #666;">Offset:</label>
+                                        <input v-model.number="frameOffset" @input="applyOffsetToGazeVideo" type="number" class="offset-input" style="width: 70px;">
+                                        <span style="font-size: 11px; color: #666;">frames</span>
+                                    </div>
+                                    <button @click="adjustOffset(1)" class="btn-offset" title="+1 frame">▶</button>
+                                    <button @click="adjustOffset(10)" class="btn-offset" title="+10 frames">⏩</button>
+                                    <button @click="frameOffset = 0; applyOffsetToGazeVideo()" class="btn-offset-reset" title="Reset to 0">↺</button>
+                                </div>
+                                <div class="offset-hint">
+                                    <small style="color: #666;">
+                                        Positive = gaze video ahead | Negative = stimulus video ahead
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <!-- Left: Original Stimulus Video -->
+                            <div class="video-panel">
+                                <div class="video-panel-header">📹 Original Stimulus</div>
+                                <div class="canvas-wrapper">
+                                    <video 
+                                        ref="videoPlayer"
+                                        :src="videoSrc"
+                                        @loadedmetadata="onVideoLoaded"
+                                        @timeupdate="onTimeUpdate"
+                                        crossorigin="anonymous"
+                                    ></video>
+                                    
+                                    <canvas 
+                                        ref="roiCanvas"
+                                        @mousedown="startDrawROI"
+                                        @mousemove="drawingROI"
+                                        @mouseup="endDrawROI"
+                                        class="roi-canvas"
+                                    ></canvas>
+                                </div>
+                            </div>
+                            
+                            <!-- Right: Eye Gaze Video -->
+                            <div class="video-panel">
+                                <div class="video-panel-header">👁️ Eye Gaze Data</div>
+                                <div class="canvas-wrapper">
+                                    <video 
+                                        ref="gazeVideoPlayer"
+                                        :src="gazeVideoSrc"
+                                        crossorigin="anonymous"
+                                    ></video>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Slider (Full Width) -->
+                        <div class="slider-container">
+                            <!-- Scene boundaries visualization -->
+                            <div class="scene-boundaries">
+                                <div 
+                                    v-for="(scene, idx) in scenes" 
+                                    :key="'scene-' + idx"
+                                    :style="getSceneBoundaryStyle(scene, idx)"
+                                    :class="['scene-boundary', { 
+                                        'active-scene': idx === activeSceneIdx,
+                                        'selected-scene': idx === selectedSceneIdx 
+                                    }]"
+                                    @click="onSceneSegmentClick(idx)"
+                                    :title="getSceneTooltip(scene, idx)"
+                                >
+                                    <!-- Scene label overlay -->
+                                    <div class="scene-label">
+                                        <span class="scene-name">{{ scene.custom_name || scene.name }}</span>
+                                        <span class="scene-meta">{{ ((scene.end_frame - scene.start_frame + 1) / videoInfo.fps).toFixed(1) }}s</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Draggable boundary handles -->
+                                <div 
+                                    v-for="(scene, idx) in scenes.slice(0, -1)" 
+                                    :key="'handle-' + idx"
+                                    :style="getBoundaryHandleStyle(scene)"
+                                    class="boundary-handle"
+                                    @mousedown="startDragBoundary($event, idx)"
+                                    :title="'Drag to adjust boundary'"
+                                >
+                                    <div class="boundary-line"></div>
+                                </div>
+                                
+                                <!-- Current frame position indicator -->
+                                <div 
+                                    class="frame-position-indicator"
+                                    :style="{ left: ((currentFrame / (videoInfo.total_frames - 1)) * 100) + '%' }"
+                                ></div>
+                            </div>
+                            
+                            <input 
+                                type="range" 
+                                v-model="currentFrame" 
+                                :max="videoInfo.total_frames - 1"
+                                @input="seekToFrame"
+                                class="frame-slider"
+                            >
+                        </div>
+                        
+                        <!-- Playback Controls -->
+                        <div class="playback-controls-new">
+                            <!-- Frame Info -->
+                            <div class="frame-info-row">
+                                <span class="frame-info">
+                                    Frame {{ currentFrame }} / {{ videoInfo.total_frames }}
+                                    ({{ formatTime(currentTime) }} / {{ formatTime(videoDuration) }})
+                                </span>
+                            </div>
+                            
+                            <!-- 3-Column Grid Layout -->
+                            <div class="controls-grid">
+                                <!-- Column 1: Scene Actions -->
+                                <div class="scene-actions">
+                                    <button @click="splitScene" class="btn btn-icon btn-sm" title="Split Scene">
+                                        <i data-lucide="square-split-horizontal" style="width: 16px; height: 16px;"></i>
+                                    </button>
+                                    <button @click="mergeWithPrevious" class="btn btn-icon btn-sm" :disabled="selectedSceneIdx === 0" title="Merge with Previous">
+                                        <i data-lucide="merge" style="width: 16px; height: 16px;"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Column 2: Navigation Controls -->
+                                <div class="nav-controls-row">
+                                    <button @click="jumpToStart" class="btn btn-icon" title="Jump to Start">
+                                        <i data-lucide="skip-back" style="width: 18px; height: 18px;"></i>
+                                    </button>
+                                    <button @click="prevScene" class="btn btn-icon" title="Previous Scene">
+                                        <i data-lucide="chevrons-left" style="width: 18px; height: 18px;"></i>
+                                    </button>
+                                    <button @click="prevFrame" class="btn btn-icon" title="Previous Frame">
+                                        <i data-lucide="chevron-left" style="width: 18px; height: 18px;"></i>
+                                    </button>
+                                    <button v-show="!playing" @click="togglePlayback" class="btn btn-icon btn-play-main" title="Play">
+                                        <i data-lucide="play" style="width: 20px; height: 20px;"></i>
+                                    </button>
+                                    <button v-show="playing" @click="togglePlayback" class="btn btn-icon btn-play-main" title="Pause">
+                                        <i data-lucide="pause" style="width: 20px; height: 20px;"></i>
+                                    </button>
+                                    <button @click="nextFrame" class="btn btn-icon" title="Next Frame">
+                                        <i data-lucide="chevron-right" style="width: 18px; height: 18px;"></i>
+                                    </button>
+                                    <button @click="nextScene" class="btn btn-icon" title="Next Scene">
+                                        <i data-lucide="chevrons-right" style="width: 18px; height: 18px;"></i>
+                                    </button>
+                                    <button @click="jumpToEnd" class="btn btn-icon" title="Jump to End">
+                                        <i data-lucide="skip-forward" style="width: 18px; height: 18px;"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Column 3: History Actions -->
+                                <div class="history-actions">
+                                    <button @click="undo" class="btn btn-icon btn-sm" :disabled="!canUndo" title="Undo">
+                                        <i data-lucide="undo-2" style="width: 16px; height: 16px;"></i>
+                                    </button>
+                                    <button @click="redo" class="btn btn-icon btn-sm" :disabled="!canRedo" title="Redo">
+                                        <i data-lucide="redo-2" style="width: 16px; height: 16px;"></i>
+                                    </button>
+                                    <span v-if="history.length > 1" class="history-count" title="History states">{{ historyIndex + 1 }}/{{ history.length }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-else class="no-video">
+                        <p>📹 No video loaded. Upload or download a video to start.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Sidebar: ROIs -->
+            <div class="right-sidebar">
+                <!-- ROI Editor -->
+                <div class="editor-section">
+                    <h2><i data-lucide="square-dashed" style="width: 18px; height: 18px; vertical-align: middle;"></i> ROIs <span v-if="currentScene" class="scene-badge">{{ currentScene.custom_name || currentScene.name }}</span></h2>
+                    
+                    <TransitionGroup name="list" tag="div" v-if="currentScene" class="roi-list">
+                        <div 
+                            v-for="(roi, idx) in currentScene.rois" 
+                            :key="idx"
+                            :class="['roi-item', { active: selectedROIIdx === idx }]"
+                            :style="{ 
+                                borderLeftColor: roi.color_tag || '#61AFEF', 
+                                borderLeftWidth: '4px',
+                                borderLeftStyle: 'solid'
+                            }"
+                            @click="selectROI(idx)"
+                        >
+                            <div v-if="editingROIIdx === idx" @click.stop>
+                                <input 
+                                    :id="'roi-input-' + idx"
+                                    v-model="editingName"
+                                    @blur="finishRenameROI(idx)"
+                                    @keyup.enter="finishRenameROI(idx)"
+                                    @keyup.esc="cancelRenameROI"
+                                    class="inline-edit-input"
+                                    type="text"
+                                >
+                                <br>
+                                <small>{{ roi.x }}, {{ roi.y }} | {{ roi.width }}x{{ roi.height }}</small>
+                            </div>
+                            <div v-else>
+                                <strong @dblclick.stop="startRenameROI(idx)">{{ roi.label }}</strong><br>
+                                <small>{{ roi.x }}, {{ roi.y }} | {{ roi.width }}x{{ roi.height }}</small>
+                            </div>
+                            <div class="item-menu">
+                                <button @click.stop="toggleROIMenu(idx)" class="btn-menu" title="Options"><i data-lucide="more-vertical" style="width: 16px; height: 16px;"></i></button>
+                                <div v-if="openROIMenu === idx" class="dropdown-menu" @click.stop>
+                                    <button @click="startRenameROI(idx); closeAllMenus()" class="menu-item"><i data-lucide="edit-2" style="width: 14px; height: 14px; vertical-align: middle;"></i> Rename</button>
+                                    <button @click="deleteROI(idx); closeAllMenus()" class="menu-item menu-delete"><i data-lucide="trash-2" style="width: 14px; height: 14px; vertical-align: middle;"></i> Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </TransitionGroup>
+                    
+                    <div class="roi-controls">
+                        <p><em>Click & drag on video to draw ROI</em></p>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+        
+        <!-- Modal for ROI Naming -->
+        <div v-if="showROIModal" class="modal-overlay" @click.self="cancelROI">
+            <div class="modal-content modal-small">
+                <div class="modal-header">
+                    <h2>✏️ Name this ROI</h2>
+                    <button @click="cancelROI" class="btn-close">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group">
+                        <label><strong>ROI Label:</strong></label>
+                        <input 
+                            v-model="newROILabel" 
+                            type="text" 
+                            placeholder="Enter ROI name..." 
+                            class="input-text"
+                            @keyup.enter="saveROI"
+                            ref="roiLabelInput"
+                        >
+                    </div>
+                    <div v-if="tempROI" class="roi-info">
+                        <small>Position: {{ tempROI.x }}, {{ tempROI.y }} | Size: {{ tempROI.width }}x{{ tempROI.height }}</small>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button @click="saveROI" class="btn btn-primary">✓ Save ROI</button>
+                    <button @click="cancelROI" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal for Save As -->
+        <div v-if="showSaveAsModal" class="modal-overlay" @click.self="showSaveAsModal = false">
+            <div class="modal-content modal-small">
+                <div class="modal-header">
+                    <h2>💾 Save Workspace As</h2>
+                    <button @click="showSaveAsModal = false" class="btn-close">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group">
+                        <label><strong>Workspace Filename:</strong></label>
+                        <input 
+                            v-model="saveAsFilename" 
+                            type="text" 
+                            placeholder="Enter filename..." 
+                            class="input-text"
+                            @keyup.enter="confirmSaveAs"
+                        >
+                        <small class="help-text">File will be saved in 'projects' folder. Extension .json will be added automatically.</small>
+                    </div>
+                    <div v-if="currentWorkspaceFile" class="info-box">
+                        <small><strong>Current file:</strong> {{ currentWorkspaceFile }}</small>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button @click="confirmSaveAs" class="btn btn-primary">💾 Save As</button>
+                    <button @click="showSaveAsModal = false" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <span>Status: {{ statusMessage }}</span>
+            <span v-if="currentWorkspaceFile" class="status-workspace">📁 {{ currentWorkspaceFile }}</span>
+            <span v-if="recording && !useMouseFallback" class="status-recording" style="background-color: #dc3545;">🔴 Recording (Eye Tracking): {{ framesRecorded }} frames</span>
+            <span v-if="recording && useMouseFallback" class="status-recording" style="background-color: #ffc107; color: #000;">🖱️ Recording (Mouse): {{ framesRecorded }} frames</span>
+            <span v-if="sessionDir">Session: {{ sessionDir }}</span>
+            <span v-if="lastUpdated" class="status-last-saved">💾 Terakhir disimpan: {{ formatTimestamp(lastUpdated) }}</span>
+        </footer>
+        
+        </div><!-- End Main Application wrapper -->
+    </div>
+{% endraw %}
+    
+    <!-- Vue.js App Script -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

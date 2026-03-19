@@ -1,0 +1,87 @@
+{
+    "version": "1.0.0",
+    "language": "en",
+    "first_run": false,
+    "system_check": {
+        "completed": true,
+        "last_check": "2025-11-11T08:36:38.200719",
+        "windows_version": "Windows 11",
+        "tobii_connected": true,
+        "obs_configured": false,
+        "ram_available_gb": 15.41
+    },
+    "detection": {
+        "default_method": "hough",
+        "processing_mode": "auto",
+        "chunk_size_frames": 1000,
+        "kalman_process_noise": 0.1,
+        "kalman_measurement_noise": 2.0,
+        "hough_param1": 50,
+        "hough_param2": 13,
+        "hough_min_radius": 73,
+        "hough_max_radius": 75,
+        "contour_threshold": 200,
+        "color_lower_hsv": [
+            0,
+            0,
+            200
+        ],
+        "color_upper_hsv": [
+            180,
+            30,
+            255
+        ],
+        "blob_min_area": 100,
+        "blob_max_area": 1000
+    },
+    "game": {
+        "camera_id": 0,
+        "dwell_time_seconds": 2.0,
+        "exit_hover_seconds": 3.0,
+        "debug_mode_key": "F12",
+        "question_bank": "assets/templates/questions_template.xlsx",
+        "dark_mode": true,
+        "fullscreen": true,
+        "adaptive_params": true,
+        "adaptation_rate": 0.1
+    },
+    "stimulus": {
+        "default_protocol": "standard",
+        "quality_threshold": 0.7,
+        "adaptation_enabled": true,
+        "target_size_range": [
+            15,
+            40
+        ],
+        "fixation_duration": 5,
+        "smooth_pursuit_duration": 10,
+        "saccade_duration_per_point": 3,
+        "preparation_duration": 3
+    },
+    "ui": {
+        "theme": "light",
+        "window_width": 1024,
+        "window_height": 768,
+        "font_family": "Arial",
+        "font_size": 12
+    },
+    "paths": {
+        "database_dir": "Database",
+        "sessions_dir": "Sessions",
+        "logs_dir": "Logs",
+        "assets_dir": "assets"
+    },
+    "obs": {
+        "virtual_camera_name": "OBS Virtual Camera",
+        "scene_template_path": "assets/templates/obs_scene.json",
+        "auto_start": false
+    },
+    "report": {
+        "include_branding": true,
+        "header_image": "assets/icons/logo.png",
+        "footer_text": "Medical Technology Study Program - ITS",
+        "author_name": "Kahlil Gibran Al Zulmi",
+        "supervisor": "Prof. Dr. Ir. Adhi Dharma Wibawa, S.T., M.T.",
+        "co_advisor": "dr. Zain Budi Syulthoni, Sp.KJ."
+    }
+}

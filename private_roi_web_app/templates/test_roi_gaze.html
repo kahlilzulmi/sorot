@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROI & Gaze Connection Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #header {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #4a4a4a;
+            z-index: 1000;
+        }
+
+        #header h1 {
+            font-size: 24px;
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        #controls {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+
+        .btn-start {
+            background: #4caf50;
+            color: white;
+        }
+
+        .btn-start:hover {
+            background: #66bb6a;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+        }
+
+        .btn-stop {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-stop:hover {
+            background: #e57373;
+            box-shadow: 0 0 20px rgba(244, 67, 54, 0.6);
+        }
+
+        .btn-reset {
+            background: #ff9800;
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #ffb74d;
+        }
+
+        .btn-save {
+            background: #2196f3;
+            color: white;
+        }
+
+        .btn-save:hover {
+            background: #64b5f6;
+        }
+
+        #main-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        #test-canvas {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #2a2a2a 0%, #1a1a1a 100%);
+        }
+
+        .roi-box {
+            position: absolute;
+            border: 3px solid;
+            border-radius: 8px;
+            transition: all 0.2s;
+            pointer-events: none;
+        }
+
+        .roi-box.active {
+            border-width: 6px;
+            box-shadow: 0 0 30px;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .roi-label {
+            position: absolute;
+            top: -35px;
+            left: 0;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #000;
+            white-space: nowrap;
+        }
+
+        #gaze-cursor {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #00ff00;
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            transition: all 0.1s;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+        }
+
+        #gaze-cursor::before {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #00ff00;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #gaze-cursor::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: #00ff00;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+        }
+
+        #stats-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 20px;
+            border-radius: 10px;
+            min-width: 300px;
+            border: 2px solid #4a4a4a;
+            backdrop-filter: blur(10px);
+        }
+
+        #stats-panel h3 {
+            color: #00ff88;
+            margin-bottom: 15px;
+            font-size: 18px;
+            border-bottom: 2px solid #4a4a4a;
+            padding-bottom: 10px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px 0;
+        }
+
+        .stat-label {
+            color: #aaa;
+        }
+
+        .stat-value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .roi-stat {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid;
+            padding-left: 10px;
+        }
+
+        #status-bar {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            border: 2px solid;
+            backdrop-filter: blur(10px);
+            z-index: 999;
+        }
+
+        #grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.1;
+        }
+
+        .grid-line-v {
+            position: absolute;
+            width: 1px;
+            height: 100%;
+            background: #fff;
+        }
+
+        .grid-line-h {
+            position: absolute;
+            width: 100%;
+            height: 1px;
+            background: #fff;
+        }
+
+        .fullscreen-hint {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .connection-status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: blink 1s infinite;
+        }
+
+        .connection-status.connected {
+            background: #4caf50;
+        }
+
+        .connection-status.disconnected {
+            background: #f44336;
+        }
+
+        @keyframes blink {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <!-- Header -->
+        <div id="header">
+            <h1>
+                <span class="connection-status disconnected" id="connection-indicator"></span>
+                ROI & Gaze Connection Test
+            </h1>
+            <div id="controls">
+                <button class="btn btn-start" onclick="startTest()">▶ Start Test</button>
+                <button class="btn btn-stop" onclick="stopTest()">⏹ Stop Test</button>
+                <button class="btn btn-reset" onclick="resetStats()">🔄 Reset</button>
+                <button class="btn btn-save" onclick="saveResults()">💾 Save</button>
+                <button class="btn btn-secondary" onclick="startCalibration()">🎯 Calibrate</button>
+                <button class="btn btn-secondary" id="cal-capture-btn" onclick="captureCalibrationPoint()" style="display:none;">📸 Capture Point</button>
+            </div>
+        </div>
+
+        <!-- Main Test Area -->
+        <div id="main-area">
+            <div id="canvas-container">
+                <canvas id="test-canvas"></canvas>
+                
+                <!-- Grid overlay -->
+                <div id="grid"></div>
+                
+                <!-- ROI boxes will be inserted here -->
+                <div id="roi-container"></div>
+                
+                <!-- Gaze cursor -->
+                <div id="gaze-cursor" style="display: none;"></div>
+                
+                <!-- Status bar -->
+                <div id="status-bar" style="display: none;">
+                    Initializing...
+                </div>
+                
+                <!-- Statistics Panel -->
+                <div id="stats-panel">
+                    <h3>📊 Statistics</h3>
+                    <div class="stat-row">
+                        <span class="stat-label">FPS:</span>
+                        <span class="stat-value" id="stat-fps">0.0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Detection Rate:</span>
+                        <span class="stat-value" id="stat-detection">0.0%</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Total Frames:</span>
+                        <span class="stat-value" id="stat-frames">0</span>
+                    </div>
+                    <hr style="margin: 15px 0; border-color: #4a4a4a;">
+                    <div id="roi-stats"></div>
+                </div>
+
+                <!-- Fullscreen hint -->
+                <div class="fullscreen-hint">
+                    Press <strong>F11</strong> for fullscreen
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ROIS = {{ rois | tojson }};
+        let updateInterval = null;
+        let currentActiveROI = null;
+
+        // Initialize canvas and grid
+        function initCanvas() {
+            const canvas = document.getElementById('test-canvas');
+            const ctx = canvas.getContext('2d');
+            const container = document.getElementById('canvas-container');
+            
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+
+            // Draw grid
+            drawGrid();
+            
+            // Draw center crosshair
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2 - 50, canvas.height / 2);
+            ctx.lineTo(canvas.width / 2 + 50, canvas.height / 2);
+            ctx.moveTo(canvas.width / 2, canvas.height / 2 - 50);
+            ctx.lineTo(canvas.width / 2, canvas.height / 2 + 50);
+            ctx.stroke();
+
+            // Draw title
+            ctx.fillStyle = '#888';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Look at different ROIs to test gaze tracking', canvas.width / 2, 40);
+        }
+
+        function drawGrid() {
+            const grid = document.getElementById('grid');
+            const container = document.getElementById('canvas-container');
+            const spacing = 100;
+            
+            grid.innerHTML = '';
+            
+            for (let x = spacing; x < container.clientWidth; x += spacing) {
+                const line = document.createElement('div');
+                line.className = 'grid-line-v';
+                line.style.left = x + 'px';
+                grid.appendChild(line);
+            }
+            
+            for (let y = spacing; y < container.clientHeight; y += spacing) {
+                const line = document.createElement('div');
+                line.className = 'grid-line-h';
+                line.style.top = y + 'px';
+                grid.appendChild(line);
+            }
+        }
+
+        // Initialize ROI boxes
+        function initROIs() {
+            const container = document.getElementById('roi-container');
+            const canvasContainer = document.getElementById('canvas-container');
+            container.innerHTML = '';
+
+            ROIS.forEach(roi => {
+                const box = document.createElement('div');
+                box.className = 'roi-box';
+                box.id = `roi-${roi.id}`;
+                box.style.borderColor = roi.color;
+                box.style.left = (roi.x * 100) + '%';
+                box.style.top = (roi.y * 100) + '%';
+                box.style.width = (roi.width * 100) + '%';
+                box.style.height = (roi.height * 100) + '%';
+
+                const label = document.createElement('div');
+                label.className = 'roi-label';
+                label.textContent = roi.name;
+                label.style.backgroundColor = roi.color;
+                box.appendChild(label);
+
+                container.appendChild(box);
+            });
+        }
+
+        // Start test
+        async function startTest() {
+            const response = await fetch('/api/start', { method: 'POST' });
+            const data = await response.json();
+            
+            if (data.success) {
+                document.getElementById('connection-indicator').classList.remove('disconnected');
+                document.getElementById('connection-indicator').classList.add('connected');
+                document.getElementById('status-bar').style.display = 'block';
+                document.getElementById('gaze-cursor').style.display = 'block';
+                
+                // Start updating
+                if (!updateInterval) {
+                    updateInterval = setInterval(updateGazeData, 50); // 20 FPS update
+                }
+            } else {
+                alert('Failed to start gaze detection. Make sure OBS virtual camera is running.');
+            }
+        }
+
+        // Stop test
+        async function stopTest() {
+            await fetch('/api/stop', { method: 'POST' });
+            
+            document.getElementById('connection-indicator').classList.remove('connected');
+            document.getElementById('connection-indicator').classList.add('disconnected');
+            document.getElementById('status-bar').style.display = 'none';
+            document.getElementById('gaze-cursor').style.display = 'none';
+            
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+        }
+
+        // Reset statistics
+        async function resetStats() {
+            await fetch('/api/reset', { method: 'POST' });
+            updateStatistics({});
+        }
+
+        // Save results
+        async function saveResults() {
+            const response = await fetch('/api/save_results', { method: 'POST' });
+            const data = await response.json();
+            
+            if (data.success) {
+                alert(`Results saved to: ${data.filename}`);
+            }
+        }
+
+        // Update gaze data
+        async function updateGazeData() {
+            try {
+                const response = await fetch('/api/gaze');
+                const data = await response.json();
+
+                // Update gaze cursor
+                if (data.gaze) {
+                    const cursor = document.getElementById('gaze-cursor');
+                    const container = document.getElementById('canvas-container');
+                    
+                    // Get actual frame dimensions from gaze data
+                    const frame_width = data.gaze.frame_width || 1920;
+                    const frame_height = data.gaze.frame_height || 1080;
+                    
+                    // Scale gaze coordinates from camera frame to screen size
+                    const scale_x = container.clientWidth / frame_width;
+                    const scale_y = container.clientHeight / frame_height;
+                    
+                    const x = data.gaze.x * scale_x;
+                    const y = data.gaze.y * scale_y;
+                    
+                    // Clamp to canvas boundaries
+                    const clamped_x = Math.max(0, Math.min(x, container.clientWidth));
+                    const clamped_y = Math.max(0, Math.min(y, container.clientHeight));
+                    
+                    cursor.style.left = clamped_x + 'px';
+                    cursor.style.top = clamped_y + 'px';
+
+                    // Update status
+                    const statusBar = document.getElementById('status-bar');
+                    if (data.gaze.roi) {
+                        statusBar.textContent = `Looking at: ${data.gaze.roi}`;
+                        const roi = ROIS.find(r => r.id === data.gaze.roi_id);
+                        if (roi) {
+                            statusBar.style.borderColor = roi.color;
+                            statusBar.style.color = roi.color;
+                        }
+                    } else {
+                        statusBar.textContent = 'Detecting gaze...';
+                        statusBar.style.borderColor = '#888';
+                        statusBar.style.color = '#888';
+                    }
+
+                    // Highlight active ROI
+                    if (data.gaze.roi_id && data.gaze.roi_id !== currentActiveROI) {
+                        // Remove previous active state
+                        document.querySelectorAll('.roi-box').forEach(box => {
+                            box.classList.remove('active');
+                        });
+                        
+                        // Add active state to current ROI
+                        if (data.gaze.roi_id > 0) {
+                            const roiBox = document.getElementById(`roi-${data.gaze.roi_id}`);
+                            if (roiBox) {
+                                roiBox.classList.add('active');
+                            }
+                        }
+                        
+                        currentActiveROI = data.gaze.roi_id;
+                    }
+                }
+
+                // Update statistics
+                updateStatistics(data);
+
+            } catch (error) {
+                console.error('Error fetching gaze data:', error);
+            }
+        }
+        // ===== Calibration =====
+        let calTargets = [];
+        let calIndex = 0;
+        let calActive = false;
+
+        async function startCalibration() {
+            const res = await fetch('/api/calibration/start', { method: 'POST' });
+            const data = await res.json();
+            if (!data.success) { alert('Calibration start failed'); return; }
+            calTargets = data.targets;
+            calIndex = 0;
+            calActive = true;
+            document.getElementById('cal-capture-btn').style.display = 'inline-block';
+            showCalibrationTarget();
+            // Ensure test is active to read gaze
+            if (!updateInterval) { await startTest(); }
+        }
+
+        function showCalibrationTarget() {
+            const container = document.getElementById('canvas-container');
+            const target = calTargets[calIndex];
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            // Create or move target indicator
+            let el = document.getElementById('cal-target');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'cal-target';
+                el.style.position = 'absolute';
+                el.style.width = '20px';
+                el.style.height = '20px';
+                el.style.borderRadius = '50%';
+                el.style.background = '#ffeb3b';
+                el.style.boxShadow = '0 0 20px rgba(255,235,59,0.8)';
+                el.style.transform = 'translate(-50%, -50%)';
+                container.appendChild(el);
+            }
+            el.style.left = (target.x / Math.max(1, videoWidth()) * w) + 'px';
+            el.style.top = (target.y / Math.max(1, videoHeight()) * h) + 'px';
+        }
+
+        function videoWidth() { return {{ rois|length > 0 and 1920 or 1920 }}; }
+        function videoHeight() { return {{ rois|length > 0 and 1080 or 1080 }}; }
+
+        async function captureCalibrationPoint() {
+            if (!calActive) return;
+            // Read one gaze sample
+            const res = await fetch('/api/gaze');
+            const data = await res.json();
+            if (!data.gaze) { alert('No gaze detected, try again'); return; }
+            const payload = {
+                index: calIndex,
+                camera_x: data.gaze.x,
+                camera_y: data.gaze.y
+            };
+            const sres = await fetch('/api/calibration/submit', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const sdata = await sres.json();
+            if (!sdata.success) { alert('Submit failed: ' + (sdata.error || '')); return; }
+            if (sdata.calibrated) {
+                calActive = false;
+                document.getElementById('cal-capture-btn').style.display = 'none';
+                const el = document.getElementById('cal-target'); if (el) el.remove();
+                alert('Calibration complete!');
+                return;
+            }
+            calIndex = sdata.next_index || (calIndex + 1);
+            if (calIndex >= calTargets.length) {
+                alert('Awaiting calibration solve...');
+                return;
+            }
+            showCalibrationTarget();
+        }
+
+
+        // Update statistics display
+        function updateStatistics(data) {
+            document.getElementById('stat-fps').textContent = (data.fps || 0).toFixed(1);
+            document.getElementById('stat-detection').textContent = (data.detection_rate || 0).toFixed(1) + '%';
+            document.getElementById('stat-frames').textContent = data.total_frames || 0;
+
+            // Update ROI stats
+            const roiStatsContainer = document.getElementById('roi-stats');
+            roiStatsContainer.innerHTML = '<strong>ROI Hits:</strong><br>';
+
+            const stats = data.stats || {};
+            const sortedStats = Object.entries(stats).sort((a, b) => b[1] - a[1]);
+
+            sortedStats.forEach(([roiName, count]) => {
+                const roi = ROIS.find(r => r.name === roiName);
+                const color = roi ? roi.color : '#888';
+                
+                const statDiv = document.createElement('div');
+                statDiv.className = 'roi-stat';
+                statDiv.style.borderColor = color;
+                statDiv.innerHTML = `
+                    <span style="color: ${color};">${roiName}:</span>
+                    <span style="float: right; color: #00ff88;">${count}</span>
+                `;
+                roiStatsContainer.appendChild(statDiv);
+            });
+        }
+
+        // Window resize handler
+        window.addEventListener('resize', () => {
+            initCanvas();
+            drawGrid();
+        });
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initCanvas();
+            initROIs();
+        });
+
+        // Handle fullscreen
+        document.addEventListener('fullscreenchange', () => {
+            setTimeout(() => {
+                initCanvas();
+                drawGrid();
+            }, 100);
+        });
+    </script>
+</body>
+</html>
