@@ -1,6 +1,6 @@
 # ROI Web Application
 
-Web-based advertisement eye tracking analysis tool with Flask + Vue.js.
+Web-based eye tracking analysis tool with Flask + Vue.js.
 
 ## Features
 - Smooth HTML5 video playback

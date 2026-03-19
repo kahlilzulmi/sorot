@@ -55,7 +55,7 @@ def main():
     
     # Import the main app
     try:
-        from video_roi_webapp import app, socketio
+        from sorot import app, socketio
     except ImportError as e:
         print(f"Error importing application: {e}")
         print("\nTrying alternative import...")
