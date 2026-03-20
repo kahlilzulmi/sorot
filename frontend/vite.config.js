@@ -1,7 +1,9 @@
 import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
 import path from 'path'
 
 export default defineConfig({
+	plugins: [vue()],
   root: '.',
   server: {
 	port: 5173,
@@ -28,7 +30,7 @@ export default defineConfig({
 	manifest: true,
 	rollupOptions: {
 	  input: {
-		app: path.resolve(__dirname, 'src/main.js')
+		app: path.resolve(__dirname, 'src/main.ts')
 	  }
 	}
   }

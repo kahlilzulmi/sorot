@@ -6,7 +6,11 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "vite",
-    "build": "vite build",
+    "dev:frontend": "vite",
+    "dev:backend": "py ../sorot.py",
+    "dev:all": "concurrently -k -n backend,frontend -c yellow,cyan \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "type-check": "vue-tsc --noEmit",
+    "build": "npm run type-check && vite build",
     "preview": "vite preview"
   },
   "keywords": [],
@@ -20,6 +24,11 @@
     "vue": "^3.5.30"
   },
   "devDependencies": {
-    "vite": "^8.0.1"
+    "@types/node": "^25.5.0",
+    "@vitejs/plugin-vue": "^6.0.5",
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.1",
+    "vue-tsc": "^3.2.6"
   }
 }
