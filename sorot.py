@@ -787,6 +787,45 @@ def import_workspace():
         'scenes': state.scenes
     })
 
+
+@app.route('/api/workspace/<path:filename>', methods=['GET'])
+def get_workspace(filename):
+    """Load a workspace JSON file from projects directory by filename."""
+    workspace_name = secure_filename(os.path.basename(filename))
+
+    if not workspace_name:
+        return jsonify({'success': False, 'error': 'Invalid workspace filename'}), 400
+
+    if not workspace_name.endswith('.json'):
+        workspace_name += '.json'
+
+    workspace_path = os.path.join(PROJECT_FOLDER, workspace_name)
+
+    if not is_path_within_project(workspace_path):
+        return jsonify({'success': False, 'error': 'Invalid workspace file path'}), 403
+
+    if not os.path.exists(workspace_path):
+        return jsonify({'success': False, 'error': f'Workspace not found: {workspace_name}'}), 404
+
+    try:
+        with open(workspace_path, 'r', encoding='utf-8') as workspace_file:
+            workspace_data = json.load(workspace_file)
+    except json.JSONDecodeError:
+        return jsonify({'success': False, 'error': f'Invalid JSON in workspace file: {workspace_name}'}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Failed to read workspace: {str(e)}'}), 500
+
+    if not isinstance(workspace_data, dict) or 'video_info' not in workspace_data or 'scenes' not in workspace_data:
+        return jsonify({'success': False, 'error': 'Invalid workspace format'}), 400
+
+    state.current_workspace_file = workspace_path
+
+    return jsonify({
+        'success': True,
+        'workspace_file': workspace_name,
+        'workspace': workspace_data
+    })
+
 @app.route('/api/save-workspace', methods=['POST'])
 def save_workspace():
     """Save workspace to file (overwrite existing or create new)."""

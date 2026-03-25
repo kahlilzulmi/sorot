@@ -40,6 +40,7 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import AppHeader from './components/layouts/AppHeader.vue'
 import StatusBar from './components/layouts/StatusBar.vue'
 import ModeSelector from './components/mode/ModeSelector.vue'
@@ -51,13 +52,82 @@ const {
 	modeTitle,
 	selectMode,
 	backToModeSelect,
+	setCurrentWorkspaceFile,
 	setStatus,
 	markUpdated
 } = useWorkspaceState()
+
+onMounted(() => {
+	void restoreWorkspaceFromNavigation()
+})
 
 // Pattern: keep side effects and status mutations in parent first.
 function openNewProjectExample() {
 	setStatus('Open New Project clicked (example action)')
 	markUpdated()
+}
+
+function getErrorMessage(error: unknown): string {
+	if (error instanceof Error) return error.message
+	if (typeof error === 'string') return error
+	return 'Unknown error'
+}
+
+async function restoreWorkspaceFromNavigation(): Promise<void> {
+	const workspaceFile = state.currentWorkspaceFile
+	if (!workspaceFile) return
+
+	try {
+		setStatus(`Restoring workspace: ${workspaceFile}...`)
+
+		const workspaceResponse = await fetch(`/api/workspace/${encodeURIComponent(workspaceFile)}`)
+		const workspacePayload = (await workspaceResponse.json()) as {
+			success?: boolean
+			error?: string
+			workspace?: Record<string, unknown>
+			workspace_file?: string
+		}
+
+		if (!workspaceResponse.ok || !workspacePayload.success || !workspacePayload.workspace) {
+			throw new Error(workspacePayload.error || 'Could not load workspace file')
+		}
+
+		const importResponse = await fetch('/api/import-workspace', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				...workspacePayload.workspace,
+				workspace_file: workspacePayload.workspace_file || workspaceFile
+			})
+		})
+
+		const importPayload = (await importResponse.json()) as {
+			success?: boolean
+			error?: string
+			video_info?: Record<string, unknown>
+			scenes?: Array<Record<string, unknown>>
+			workspace_file?: string
+		}
+
+		if (!importResponse.ok || !importPayload.success) {
+			throw new Error(importPayload.error || 'Could not import workspace data')
+		}
+
+		state.videoInfo = importPayload.video_info || (workspacePayload.workspace.video_info as Record<string, unknown>) || null
+		state.scenes = importPayload.scenes || (workspacePayload.workspace.scenes as Array<Record<string, unknown>>) || []
+		setCurrentWorkspaceFile(importPayload.workspace_file || workspacePayload.workspace_file || workspaceFile)
+
+		if (state.appMode === 'select') {
+			selectMode('import')
+		} else {
+			setStatus(`Workspace restored: ${state.currentWorkspaceFile}`)
+		}
+
+		markUpdated()
+	} catch (error) {
+		setStatus(`Workspace restore failed: ${getErrorMessage(error)}`)
+	}
 }
 </script>
