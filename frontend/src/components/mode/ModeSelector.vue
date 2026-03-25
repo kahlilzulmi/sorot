@@ -3,13 +3,14 @@
 	<div v-if="appMode === 'select'" class="mode-selector-overlay">
 		<div class="mode-selector-container">
 			<div class="mode-selector-header">
+				
 				<h1>SOROT</h1>
 				<p>System for Optimized Region of Interest Tracking</p>
 			</div>
 
 			<div class="mode-cards">
 				<button class="mode-card" type="button" @click="$emit('select-mode', 'live')">
-					<TvMinimalPlay color="white" size="128" />
+					<TvMinimalPlay class="mode-icon"  size="128" />
 					<br>
 					<h2>Live Recording</h2>
 					<p class="mode-description">Record a new eye-tracking session in real time.</p>
@@ -22,7 +23,7 @@
 				</button>
 
 				<button class="mode-card" type="button" @click="$emit('select-mode', 'import')">
-					<Import color="white" size="128"/>
+					<Import class="mode-icon" size="128"/>
 					<br>
 					<h2>Import and Analyze</h2>
 					<p class="mode-description">Analyze an existing gaze dataset and video.</p>

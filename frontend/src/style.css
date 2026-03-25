@@ -1977,7 +1977,7 @@ body {
 }
 
 .mode-icon {
-    font-size: 64px;
+    color: var(--color-accent);
     margin-bottom: 20px;
 }
 
