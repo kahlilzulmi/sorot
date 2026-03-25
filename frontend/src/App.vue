@@ -61,4 +61,3 @@ function openNewProjectExample() {
 	markUpdated()
 }
 </script>
-

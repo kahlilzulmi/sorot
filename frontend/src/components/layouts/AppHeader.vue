@@ -6,7 +6,7 @@
 				Back
 			</button>
 			<div class="header-title">
-				<h1>Video ROI Analyzer</h1>
+				<h1>SOROT</h1>
 				<p>{{ modeTitle }}</p>
 			</div>
 		</div>
