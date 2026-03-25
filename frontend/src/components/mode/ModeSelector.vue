@@ -3,7 +3,7 @@
 	<div v-if="appMode === 'select'" class="mode-selector-overlay">
 		<div class="mode-selector-container">
 			<div class="mode-selector-header">
-				
+				<img src="/sorot-icon.png" alt="SOROT logo" class="mode-logo" />
 				<h1>SOROT</h1>
 				<p>System for Optimized Region of Interest Tracking</p>
 			</div>
