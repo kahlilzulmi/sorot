@@ -45,43 +45,24 @@
 					>
 				</div>
 
-				<div class="playback-controls-new">
-					<div class="frame-info-row">
-						<span class="frame-info">
-							Frame {{ currentFrame }} / {{ videoInfo.total_frames }}
-							({{ formatTime(currentTime) }} / {{ formatTime(videoDuration) }})
-						</span>
-					</div>
-
-					<div class="controls-grid">
-						<div class="scene-actions">
-							<button class="btn btn-icon btn-sm" type="button" @click="$emit('split-scene')">
-								<SquareSplitHorizontal :size="16" />
-							</button>
-							<button class="btn btn-icon btn-sm" type="button" @click="$emit('merge-scene')">
-								<Merge :size="16" />
-							</button>
-						</div>
-
-						<div class="nav-controls-row">
-							<button class="btn btn-icon" type="button" @click="$emit('jump-start')"><SkipBack :size="18" /></button>
-							<button class="btn btn-icon" type="button" @click="$emit('prev-scene')"><ChevronsLeft :size="18" /></button>
-							<button class="btn btn-icon" type="button" @click="$emit('prev-frame')"><ChevronLeft :size="18" /></button>
-							<button class="btn btn-icon btn-play-main" type="button" @click="$emit('toggle-play')">
-								<Play v-if="!playing" :size="20" />
-								<Pause v-else :size="20" />
-							</button>
-							<button class="btn btn-icon" type="button" @click="$emit('next-frame')"><ChevronRight :size="18" /></button>
-							<button class="btn btn-icon" type="button" @click="$emit('next-scene')"><ChevronsRight :size="18" /></button>
-							<button class="btn btn-icon" type="button" @click="$emit('jump-end')"><SkipForward :size="18" /></button>
-						</div>
-
-						<div class="history-actions">
-							<button class="btn btn-icon btn-sm" type="button" @click="$emit('undo')"><Undo2 :size="16" /></button>
-							<button class="btn btn-icon btn-sm" type="button" @click="$emit('redo')"><Redo2 :size="16" /></button>
-						</div>
-					</div>
-				</div>
+				<PlaybackControls
+					:current-frame="currentFrame"
+					:total-frames="videoInfo.total_frames"
+					:current-time="currentTime"
+					:video-duration="videoDuration"
+					:playing="playing"
+					@toggle-play="$emit('toggle-play')"
+					@jump-start="$emit('jump-start')"
+					@jump-end="$emit('jump-end')"
+					@prev-scene="$emit('prev-scene')"
+					@next-scene="$emit('next-scene')"
+					@prev-frame="$emit('prev-frame')"
+					@next-frame="$emit('next-frame')"
+					@split-scene="$emit('split-scene')"
+					@merge-scene="$emit('merge-scene')"
+					@undo="$emit('undo')"
+					@redo="$emit('redo')"
+				/>
 			</div>
 
 			<div v-else class="no-video">
@@ -93,20 +74,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import {
-	ChevronLeft,
-	ChevronRight,
-	ChevronsLeft,
-	ChevronsRight,
-	Merge,
-	Pause,
-	Play,
-	Redo2,
-	SkipBack,
-	SkipForward,
-	SquareSplitHorizontal,
-	Undo2
-} from '@lucide/vue'
+import PlaybackControls from './PlaybackControls.vue'
 
 interface Roi {
 	label: string
@@ -191,14 +159,5 @@ function sceneColor(index: number): string {
 function onSliderInput(event: Event): void {
 	const target = event.target as HTMLInputElement
 	emit('frame-change', Number(target.value))
-}
-
-function formatTime(seconds: number): string {
-	if (!Number.isFinite(seconds) || seconds < 0) return '00:00'
-	const s = Math.floor(seconds % 60)
-	const m = Math.floor((seconds / 60) % 60)
-	const h = Math.floor(seconds / 3600)
-	if (h > 0) return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-	return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 </script>
