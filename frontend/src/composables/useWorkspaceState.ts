@@ -1,4 +1,7 @@
 import { computed, reactive, type ComputedRef } from 'vue'
+import type { VideoInfo, WorkspaceScene } from '../types/workspace'
+
+export type { VideoInfo, WorkspaceScene } from '../types/workspace'
 
 export type AppMode = 'select' | 'live' | 'import'
 
@@ -13,8 +16,8 @@ interface StoredNavigation {
 export interface WorkspaceState {
 	appMode: AppMode
 	statusMessage: string
-	videoInfo: Record<string, unknown> | null
-	scenes: Array<Record<string, unknown>>
+	videoInfo: VideoInfo | null
+	scenes: WorkspaceScene[]
 	currentFrame: number
 	showNewVideoModal: boolean
 	lastUpdated: string | null

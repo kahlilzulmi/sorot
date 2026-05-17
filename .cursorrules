@@ -1,0 +1,25 @@
+# Sorot UI Rules
+- You are an expert in Vue 3, Vite, TypeScript, and Tailwind CSS.
+- Always use `<script setup lang="ts">` and Composition API.
+- Do NOT use Options API.
+- For reactivity, prefer `ref` over `reactive` unless grouping a complex object.
+- Strictly type all props, emits, and API responses. No `any` types allowed.
+- Follow Gestalt principles for UI/UX. Use standard Tailwind utility classes.
+- If handling eye-tracking data arrays, prioritize performance and avoid deep watching large arrays unless necessary.
+
+## Tech Stack
+- Framework: Vue 3 (Composition API with `<script setup>`)
+- Build Tool: Vite
+- Language: TypeScript (Strict mode enabled)
+- State Management: Pinia
+- Styling: Tailwind CSS
+
+## Core Constraints
+- CLIENT-SIDE ONLY: All video processing, algorithm execution, and CSV generation MUST occur locally in the browser. Do not write any Node.js backend logic.
+- PERFORMANCE: Heavy computer vision extraction or frame-by-frame processing must use Web Workers to prevent UI freezing.
+- ACCURACY: Gaze extraction algorithms must account for a ~15px margin of error.
+
+## Coding Style
+- Use descriptive, explicit variable names (e.g., `gazeCoordinates` instead of `coords`).
+- Extract complex UI elements into modular, reusable Vue components.
+- Strongly type all data structures, especially for X/Y coordinates and ROI boundaries.

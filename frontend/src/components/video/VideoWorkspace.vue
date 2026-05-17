@@ -11,9 +11,22 @@
 					</div>
 				</div>
 
-				<div class="canvas-wrapper">
-					<video :src="videoSrc" crossorigin="anonymous" controls style="width: 100%;"></video>
-					<canvas class="roi-canvas"></canvas>
+				<div ref="canvasWrapperRef" class="canvas-wrapper">
+					<video
+						ref="videoPlayerRef"
+						:src="videoSrc"
+						crossorigin="anonymous"
+						style="width: 100%;"
+						@loadedmetadata="onVideoLoaded"
+					></video>
+					<canvas
+						ref="roiCanvasRef"
+						class="roi-canvas"
+						:class="{ 'roi-disabled': roiInteractionDisabled }"
+						@mousedown="onMouseDown"
+						@mousemove="onMouseMove"
+						@mouseup="onMouseUp"
+					></canvas>
 				</div>
 
 				<div class="slider-container">
@@ -73,7 +86,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useRoiCanvas } from '../../composables/useRoiCanvas'
 import PlaybackControls from './PlaybackControls.vue'
 
 interface Roi {
@@ -112,6 +126,7 @@ const props = defineProps<{
 	currentTime: number
 	videoDuration: number
 	playing: boolean
+	roiInteractionDisabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -129,6 +144,18 @@ const emit = defineEmits<{
 	(e: 'undo'): void
 	(e: 'redo'): void
 }>()
+
+const canvasWrapperRef = ref<HTMLElement | null>(null)
+const videoPlayerRef = ref<HTMLVideoElement | null>(null)
+const roiCanvasRef = ref<HTMLCanvasElement | null>(null)
+const roiInteractionDisabled = computed(() => props.roiInteractionDisabled ?? false)
+
+const {
+	onMouseDown,
+	onMouseMove,
+	onMouseUp,
+	syncCanvasToVideoLayout
+} = useRoiCanvas(roiCanvasRef, videoPlayerRef, canvasWrapperRef, roiInteractionDisabled)
 
 const framePosition = computed(() => {
 	if (!props.videoInfo || props.videoInfo.total_frames <= 1) return '0%'
@@ -159,5 +186,9 @@ function sceneColor(index: number): string {
 function onSliderInput(event: Event): void {
 	const target = event.target as HTMLInputElement
 	emit('frame-change', Number(target.value))
+}
+
+function onVideoLoaded(): void {
+	syncCanvasToVideoLayout()
 }
 </script>
