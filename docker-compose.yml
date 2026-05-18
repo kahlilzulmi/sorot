@@ -1,0 +1,19 @@
+services:
+  sorot:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:-docker-dev-secret-change-me}
+      FLASK_DEBUG: "0"
+    volumes:
+      - sorot-uploads:/app/uploaded_videos
+      - sorot-downloads:/app/downloaded_videos
+      - sorot-sessions:/app/sessions
+      - sorot-projects:/app/projects
+
+volumes:
+  sorot-uploads:
+  sorot-downloads:
+  sorot-sessions:
+  sorot-projects:

@@ -133,7 +133,8 @@ required_folders = [
     'downloaded_videos',
     'sessions',
     'projects',
-    'templates'
+    'frontend',
+    'legacy/templates',
 ]
 
 print("5. Testing folder structure...")

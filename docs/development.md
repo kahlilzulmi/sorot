@@ -1,6 +1,6 @@
 # Development
 
-## Quick start
+## Quick start (Vue + Flask)
 
 ```powershell
 python -m venv .venv
@@ -10,11 +10,24 @@ cd frontend; npm install; cd ..
 .\dev.ps1
 ```
 
-Open http://localhost:5173.
+Open http://localhost:5173 (not :5000 — that port is API-only in dev).
+
+## Docker (production-like, single port)
+
+```bash
+docker compose up --build
+```
+
+Open http://localhost:5000.
 
 ## Environment variables
 
-Copy `.env.example` to `.env` and set `FLASK_SECRET_KEY` before any shared or production deployment. OBS connection settings can live in `.env` or in the in-app **Settings** page.
+Copy `.env.example` to `.env` and set `FLASK_SECRET_KEY` before any shared or production deployment. OBS connection settings can live in `.env` or in the legacy **Settings** page at `/legacy/settings`.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `FLASK_SECRET_KEY` | dev placeholder | Session signing |
+| `FLASK_DEBUG` | `true` locally, `0` in Docker | Flask debug mode |
 
 ## Useful commands
 
@@ -26,18 +39,18 @@ Copy `.env.example` to `.env` and set `FLASK_SECRET_KEY` before any shared or pr
 | `cd frontend && npm run build` | Production bundle → `static/dist/` |
 | `cd frontend && npm run type-check` | Vue/TS type check |
 | `python tests/test_setup.py` | Dependency and layout smoke test |
-| `python app_launcher.py` | Opens browser to legacy :5000 entry (packaged builds) |
+| `docker compose up --build` | Full stack with built Vue UI |
 
 ## Tests
 
-Scripts under `tests/` are run directly with Python (not a unified pytest suite yet):
+Scripts under `tests/` are run directly with Python:
 
 ```bash
 python tests/test_setup.py
 python tests/test_roi_api.py
 ```
 
-Add new tests alongside existing files and document any required sample media in the test module docstring.
+Legacy gaze test server: `python legacy/tests/test_roi_gaze_webapp.py` (port 5001).
 
 ## Optional features
 

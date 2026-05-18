@@ -2,7 +2,7 @@
 
 **S**timulus **O**riented **R**egion-**o**f-interest **T**ool — a web application for academic and laboratory eye-tracking studies on video advertisements and other stimuli.
 
-Define scenes and ROIs on video, import or record gaze data, and export metrics for neuromarketing and vision research.
+The primary interface is a **Vue 3 + Vite + TypeScript** single-page app (`frontend/`) talking to a **Flask + Socket.IO** API (`sorot.py`). Define scenes and ROIs, import or record gaze data, and export metrics for neuromarketing and vision research.
 
 ## Features
 
@@ -15,48 +15,72 @@ Define scenes and ROIs on video, import or record gaze data, and export metrics 
 - Optional OBS Studio control and YouTube stimulus download
 - Workspace save/load (JSON projects)
 
-## Screenshots
+## Quick start with Docker
 
-_Add screenshots or a short demo GIF before publishing — helps reviewers and collaborators._
-
-## Quick start
-
-### Requirements
-
-- Python 3.10+
-- Node.js 18+ (for the Vue frontend)
-
-### Install
+The fastest way to run SOROT with the production Vue UI (no local Node.js required):
 
 ```bash
 git clone https://github.com/kahlilzulmi/sorot.git
 cd sorot
-
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS / Linux
-# source .venv/bin/activate
-
-pip install -r requirements.txt
-
-cd frontend
-npm install
-cd ..
+docker compose up --build
 ```
 
-### Run (development)
+Open **http://localhost:5000**
+
+Set a real secret for anything beyond localhost:
+
+```bash
+FLASK_SECRET_KEY=your-long-random-string docker compose up --build
+```
+
+Data (videos, sessions, workspaces) is stored in Docker volumes and persists across restarts.
+
+Plain Docker:
+
+```bash
+docker build -t sorot .
+docker run --rm -p 5000:5000 -e FLASK_SECRET_KEY=change-me sorot
+```
+
+## Development (Vue + Flask)
+
+### Requirements
+
+- Python 3.10+
+- Node.js 18+
+
+### Install
+
+```bash
+pip install -r requirements.txt
+cd frontend && npm install && cd ..
+```
+
+Copy `.env.example` to `.env` and set `FLASK_SECRET_KEY` when needed.
+
+### Run
 
 ```powershell
 .\dev.ps1
 ```
 
-- **App UI**: http://localhost:5173  
-- **API / Socket.IO**: http://127.0.0.1:5000  
+| Service | URL |
+|---------|-----|
+| **Vue UI (use this)** | http://localhost:5173 |
+| Flask API / Socket.IO | http://127.0.0.1:5000 |
 
-Or run the backend alone: `python sorot.py`
+Vite proxies API and WebSocket traffic to Flask.
 
-Copy `.env.example` to `.env` and set `FLASK_SECRET_KEY` before deploying beyond localhost.
+### Production-style local run (single port)
+
+Build the frontend and serve it from Flask on port 5000:
+
+```bash
+cd frontend && npm run build && cd ..
+python sorot.py
+```
+
+Open **http://localhost:5000**
 
 ### Verify installation
 
@@ -68,19 +92,22 @@ python tests/test_setup.py
 
 ```
 sorot/
-├── sorot.py                 # Flask + Socket.IO application
+├── sorot.py                 # Flask + Socket.IO API
+├── frontend/                # Vue 3 + Vite UI (primary)
+├── static/dist/             # Production build output (gitignored; created by npm run build)
+├── legacy/                  # Archived CDN-Vue UI (see legacy/README.md)
 ├── gaze_post_processor.py   # Gaze analysis pipeline
 ├── report_generator.py      # PDF / Excel reports
-├── app_launcher.py          # Desktop-style launcher (optional)
-├── frontend/                # Vue 3 + Vite + TypeScript UI
 ├── tests/                   # Setup and integration tests
-├── docs/                    # Architecture and contributor guides
-├── templates/               # Legacy HTML UI (CDN Vue)
-├── static/                  # Legacy assets; production build → static/dist/
+├── docs/                    # Architecture and deployment guides
 └── projects/                # Workspace JSON (runtime; see example.workspace.json)
 ```
 
 Runtime directories (`uploaded_videos/`, `sessions/`, etc.) are created automatically and are gitignored.
+
+## Legacy UI
+
+The pre-Vite interface lives under `legacy/` and is served at **http://localhost:5000/legacy/** when the backend is running. Do not add new features there; use `frontend/` instead.
 
 ## Documentation
 
@@ -95,7 +122,7 @@ SOROT is intended for controlled laboratory workflows. When publishing results, 
 
 ## License
 
-[MIT](LICENSE) — see file for copyright notice. Replace the copyright holder name in `LICENSE` with your laboratory or institution if required by your policy.
+[MIT](LICENSE)
 
 ## Acknowledgments
 

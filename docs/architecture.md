@@ -30,11 +30,15 @@ flowchart LR
 | Analysis | OpenCV, NumPy, Pandas | Server-side gaze post-processing and validation |
 | Optional | OBS WebSocket, yt-dlp | Live capture and YouTube stimulus download |
 
-## Development vs production UI
+## User interface
 
-- **Development**: Vite serves `frontend/` on port 5173 and proxies `/api`, `/socket.io`, and video paths to Flask on port 5000.
-- **Production build**: `cd frontend && npm run build` emits assets to `static/dist/`; configure Flask to serve the Vite manifest (or deploy frontend and API behind one reverse proxy).
-- **Legacy UI**: `templates/index.html` + `static/js/app.js` is an older CDN-based interface. New features belong in `frontend/`.
+| Mode | How to run | URL |
+|------|------------|-----|
+| **Development** | `.\dev.ps1` or `npm run dev:all` in `frontend/` | http://localhost:5173 (Vite → proxies to Flask :5000) |
+| **Production / Docker** | `npm run build` then `python sorot.py`, or `docker compose up` | http://localhost:5000 (Flask serves `static/dist/`) |
+| **Legacy (archived)** | Flask backend only | http://localhost:5000/legacy/ |
+
+The Vue app is the only supported surface for new features. See `legacy/README.md` for the old CDN-Vue stack.
 
 ## Data on disk
 
@@ -49,4 +53,3 @@ flowchart LR
 
 - [Development setup](development.md)
 - [Socket.IO production](socketio-production.md)
-- [Vite migration notes](vite-migration.md)

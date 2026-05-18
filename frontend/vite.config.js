@@ -30,9 +30,7 @@ export default defineConfig({
 	emptyOutDir: true,
 	manifest: true,
 	rollupOptions: {
-	  input: {
-		app: path.resolve(__dirname, 'src/main.ts')
-	  }
+	  input: path.resolve(__dirname, 'index.html'),
 	}
   }
 })

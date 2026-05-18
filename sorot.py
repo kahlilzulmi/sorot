@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory, Response
+from flask import Flask, Blueprint, render_template, request, jsonify, send_from_directory, Response, abort
 from flask_socketio import SocketIO, emit
 import cv2
 import numpy as np
@@ -79,6 +79,41 @@ PROJECT_FOLDER = os.path.join(SCRIPT_DIR, 'projects')
 
 for folder in [UPLOAD_FOLDER, DOWNLOADED_FOLDER, SESSIONS_FOLDER, PROJECT_FOLDER]:
     os.makedirs(folder, exist_ok=True)
+
+DIST_DIR = os.path.join(SCRIPT_DIR, 'static', 'dist')
+LEGACY_DIR = os.path.join(SCRIPT_DIR, 'legacy')
+
+legacy_ui = Blueprint(
+    'legacy_ui',
+    __name__,
+    template_folder=os.path.join(LEGACY_DIR, 'templates'),
+    static_folder=os.path.join(LEGACY_DIR, 'static'),
+    static_url_path='/legacy/static',
+    url_prefix='/legacy',
+)
+
+
+def _vue_build_ready():
+    return os.path.isfile(os.path.join(DIST_DIR, 'index.html'))
+
+
+@legacy_ui.route('/')
+def legacy_index():
+    return render_template('index.html')
+
+
+@legacy_ui.route('/test-gaze')
+def legacy_test_gaze():
+    rois = _get_normalized_rois()
+    return render_template('test_roi_gaze.html', rois=rois)
+
+
+@legacy_ui.route('/settings')
+def legacy_settings():
+    return render_template('settings.html')
+
+
+app.register_blueprint(legacy_ui)
 
 def is_path_within_project(filepath):
     """Validate that a file path is within the project directory."""
@@ -393,14 +428,31 @@ def find_roi_at_position(rois, x, y):
 
 @app.route('/')
 def index():
-    """Serve main page."""
-    return render_template('index.html')
+    """Serve the Vue production build, or a dev pointer if not built."""
+    if _vue_build_ready():
+        return send_from_directory(DIST_DIR, 'index.html')
+    return (
+        '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
+        '<title>SOROT</title></head><body style="font-family:system-ui,sans-serif;max-width:40rem;margin:2rem auto">'
+        '<h1>SOROT</h1>'
+        '<p>The Vue frontend is not built yet. For development, run:</p>'
+        '<pre>cd frontend &amp;&amp; npm install &amp;&amp; npm run dev</pre>'
+        '<p>Then open <a href="http://localhost:5173">http://localhost:5173</a> (API on port 5000).</p>'
+        '<p>Production / Docker: <code>cd frontend &amp;&amp; npm run build</code>, then reload this page.</p>'
+        '<p>Legacy UI: <a href="/legacy/">/legacy/</a></p>'
+        '</body></html>',
+        200,
+        {'Content-Type': 'text/html; charset=utf-8'},
+    )
 
-@app.route('/test-gaze')
-def test_gaze_page():
-    """Serve the Eye Gaze Test page using current scene ROIs."""
-    rois = _get_normalized_rois()
-    return render_template('test_roi_gaze.html', rois=rois)
+
+@app.route('/assets/<path:filename>')
+def vite_assets(filename):
+    """Hashed JS/CSS from the Vite build."""
+    if not _vue_build_ready():
+        abort(404)
+    return send_from_directory(os.path.join(DIST_DIR, 'assets'), filename)
+
 
 # ===== CALIBRATION ENDPOINTS =====
 
@@ -2806,11 +2858,6 @@ def handle_record_frame(data):
 # SETTINGS & DIAGNOSTICS
 # ==============================================================================
 
-@app.route('/settings')
-def settings_page():
-    """Serve settings and diagnostics page."""
-    return render_template('settings.html')
-
 @app.route('/api/settings/test-obs', methods=['POST'])
 def test_obs_connection():
     """Test OBS WebSocket connection."""
@@ -3155,6 +3202,17 @@ def get_config():
         }
     })
 
+@app.route('/<path:filename>')
+def vite_public_files(filename):
+    """Favicon and other files emitted to static/dist root by Vite."""
+    if not _vue_build_ready():
+        abort(404)
+    safe_path = os.path.join(DIST_DIR, filename)
+    if not os.path.isfile(safe_path):
+        abort(404)
+    return send_from_directory(DIST_DIR, filename)
+
+
 # ==============================================================================
 # MAIN
 # ==============================================================================
@@ -3166,11 +3224,12 @@ if __name__ == '__main__':
     print("=" * 80 + "\n")
     
     # Local dev runner: Flask-SocketIO blocks Werkzeug unless explicitly allowed.
+    _debug = os.environ.get('FLASK_DEBUG', 'true').lower() in ('1', 'true', 'yes')
     socketio.run(
         app,
         host='0.0.0.0',
         port=5000,
-        debug=True,
+        debug=_debug,
         use_reloader=False,
         allow_unsafe_werkzeug=True,
     )

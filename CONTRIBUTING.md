@@ -54,7 +54,7 @@ python tests/test_setup.py
 | `gaze_post_processor.py`, `report_generator.py` | Analysis and export |
 | `tests/` | Integration and setup checks |
 | `docs/` | Architecture notes and migration guides |
-| `templates/`, `static/js/` | Legacy web UI (CDN Vue); prefer `frontend/` for new work |
+| `legacy/` | Archived CDN-Vue UI; prefer `frontend/` for all new work |
 
 See [docs/architecture.md](docs/architecture.md) for how the pieces connect.
 

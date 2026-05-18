@@ -10,7 +10,7 @@ Features:
 - ROI hit detection with live statistics
 - Mirrors main app functionality
 
-Run: python test_roi_gaze_webapp.py
+Run: python legacy/tests/test_roi_gaze_webapp.py
 Then open: http://localhost:5001
 Press F11 for full-screen mode
 ================================================================================
@@ -20,12 +20,14 @@ from flask import Flask, render_template, Response, jsonify, request
 import cv2
 import numpy as np
 import json
+import os
 import time
 import threading
 from collections import defaultdict
 import base64
 
-app = Flask(__name__)
+_LEGACY_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+app = Flask(__name__, template_folder=os.path.join(_LEGACY_ROOT, 'templates'))
 
 # ==============================================================================
 # CONFIGURATION
