@@ -1,0 +1,33 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-01-01T00:00:00.000Z",
+  "video_info": {
+    "duration": 10,
+    "filename": "sample.mp4",
+    "fps": 25,
+    "height": 720,
+    "path": "uploaded_videos/sample.mp4",
+    "total_frames": 250,
+    "width": 1280
+  },
+  "scenes": [
+    {
+      "custom_name": "Scene 1",
+      "end_frame": 124,
+      "name": "Scene 1",
+      "rois": [
+        {
+          "angle": 0,
+          "color_tag": "#61AFEF",
+          "height": 120,
+          "label": "Product",
+          "width": 200,
+          "x": 100,
+          "y": 80
+        }
+      ],
+      "start_frame": 0
+    }
+  ],
+  "gaze_data": []
+}

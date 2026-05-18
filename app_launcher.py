@@ -61,8 +61,8 @@ def main():
         print("\nTrying alternative import...")
         # Try importing from current directory
         import importlib.util
-        spec = importlib.util.spec_from_file_location("video_roi_webapp", 
-                                                       os.path.join(application_path, "video_roi_webapp.py"))
+        spec = importlib.util.spec_from_file_location("sorot",
+                                                       os.path.join(application_path, "sorot.py"))
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         app = module.app

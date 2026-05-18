@@ -85,3 +85,9 @@ Thumbs.db
 uploaded_videos/
 downloaded_videos/
 sessions/
+projects/*
+!projects/.gitkeep
+!projects/example.workspace.json
+
+# Built frontend (regenerate with: cd frontend && npm run build)
+static/dist/

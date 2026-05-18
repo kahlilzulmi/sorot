@@ -113,10 +113,9 @@ print("4. Testing file structure...")
 import os
 
 required_files = [
-    'video_roi_webapp.py',
+    'sorot.py',
     'gaze_post_processor.py',
     'report_generator.py',
-    'IMPLEMENTATION_GUIDE.md'
 ]
 
 for file in required_files:
@@ -154,7 +153,7 @@ if errors:
     for error in errors:
         print(f"   - {error}")
     print()
-    print("Please run INSTALL.bat to install missing dependencies.")
+    print("Install dependencies: pip install -r requirements.txt")
     sys.exit(1)
 else:
     print("✅ All critical components are installed!")
@@ -165,9 +164,9 @@ if warnings:
     for warning in warnings:
         print(f"   - {warning}")
     print()
-    print("Optional features may not work. Run INSTALL.bat to install all dependencies.")
+    print("Optional features may not work. See requirements.txt for optional packages.")
 
 print()
 print("="*80)
-print("System is ready! Run: python video_roi_webapp.py")
+print("System is ready! Run: python sorot.py  (or .\\dev.ps1 for frontend + backend)")
 print("="*80)

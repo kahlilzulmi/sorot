@@ -1,6 +1,5 @@
-# ROI Web Application (video_roi_webapp.py)
+# SOROT — Video ROI / gaze analysis (sorot.py)
 # Python 3.10+ required
-# Flask-based web app for advertisement eye tracking analysis
 
 # Web Framework
 flask>=3.0.0
