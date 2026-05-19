@@ -2,6 +2,28 @@
 
 Thank you for helping improve this laboratory video ROI and gaze analysis tool. This guide covers local setup and what we expect in pull requests.
 
+## Branching
+
+| Branch | Use |
+|--------|-----|
+| **`dev`** | Default branch for day-to-day work and pull requests |
+| **`main`** | Stable line; updated by merging `dev` when a release is ready |
+
+```bash
+git clone https://github.com/kahlilzulmi/sorot.git
+cd sorot
+git checkout dev
+git pull origin dev
+
+# feature work
+git checkout -b feature/your-topic
+# ... commits ...
+git push -u origin feature/your-topic
+# open a PR: base = dev, compare = feature/your-topic
+```
+
+Maintainers merge `dev` → `main` for releases. Do not commit directly to `main` unless coordinating a hotfix.
+
 ## Prerequisites
 
 - **Python 3.10+**
@@ -76,11 +98,13 @@ If you add a dependency or adapt an external algorithm, update [NOTICE](NOTICE) 
 
 ## Pull requests
 
-1. Open an issue or comment on an existing one for large changes.
-2. Use a focused branch and a clear title (e.g. `fix: roi hit detection at scene boundaries`).
-3. Describe **what** changed and **why**; include screenshots for UI changes.
-4. Run `python tests/test_setup.py` and, for frontend changes, `cd frontend && npm run type-check`.
-5. Ensure CI-relevant tests pass if you add or change `tests/test_*.py`.
+1. Branch from **`dev`**, not `main`.
+2. Open an issue or comment on an existing one for large changes.
+3. Use a focused branch and a clear title (e.g. `fix: roi hit detection at scene boundaries`).
+4. Open the PR with **base: `dev`**.
+5. Describe **what** changed and **why**; include screenshots for UI changes.
+6. Run `python tests/test_setup.py` and, for frontend changes, `cd frontend && npm run type-check`.
+7. Ensure CI-relevant tests pass if you add or change `tests/test_*.py`.
 
 ## Questions
 

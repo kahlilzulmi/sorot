@@ -4,6 +4,21 @@
 
 The primary interface is a **Vue 3 + Vite + TypeScript** single-page app (`frontend/`) talking to a **Flask + Socket.IO** API (`sorot.py`). Define scenes and ROIs, import or record gaze data, and export metrics for neuromarketing and vision research.
 
+## Branches
+
+| Branch | Purpose |
+|--------|---------|
+| **`main`** | Stable, release-ready code |
+| **`dev`** | Active development; open pull requests here |
+
+```bash
+git clone https://github.com/kahlilzulmi/sorot.git
+cd sorot
+git checkout dev   # latest work in progress
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
+
 ## Features
 
 - HTML5 video playback with frame-accurate scene boundaries
@@ -22,6 +37,7 @@ The fastest way to run SOROT with the production Vue UI (no local Node.js requir
 ```bash
 git clone https://github.com/kahlilzulmi/sorot.git
 cd sorot
+git checkout main   # or dev for the latest integration branch
 docker compose up --build
 ```
 
