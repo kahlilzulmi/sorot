@@ -118,11 +118,13 @@ The pre-Vite interface lives under `legacy/` and is served at **http://localhost
 
 ## Research use
 
-SOROT is intended for controlled laboratory workflows. When publishing results, cite the tool and document your ROI definitions, gaze hardware, and sampling rate. Do not commit participant recordings or identifiable data to this repository.
+SOROT is intended for **educational and laboratory research** only. When publishing results, cite the tool and document your ROI definitions, gaze hardware, and sampling rate. Do not commit participant recordings or identifiable data to this repository.
+
+Automating or analyzing commercial eye-tracking overlays (including Tobii Ghost) may conflict with vendor EULAs — you are responsible for compliance. See [NOTICE](NOTICE) for trademark disclaimers, third-party licenses, and algorithm attributions.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) — third-party notices and disclaimers in [NOTICE](NOTICE).
 
 ## Acknowledgments
 

@@ -72,6 +72,8 @@ See [docs/architecture.md](docs/architecture.md) for how the pieces connect.
 - Secrets (`.env`, OBS passwords, API keys)
 - `node_modules/`, `static/dist/`, virtualenvs
 
+If you add a dependency or adapt an external algorithm, update [NOTICE](NOTICE) with attribution and any relevant disclaimer.
+
 ## Pull requests
 
 1. Open an issue or comment on an existing one for large changes.

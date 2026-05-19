@@ -16,6 +16,7 @@ projects/*
 static/dist
 *.md
 !README.md
+!NOTICE
 docs
 legacy/tests
 tests

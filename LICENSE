@@ -1,10 +1,6 @@
 MIT License
 
-<<<<<<< HEAD
-Copyright (c) 2026 SOROT contributors
-=======
-Copyright (c) 2026 Kahlil Gibran Al Zulmi
->>>>>>> 6bb1b3f95b5ae46991628f541ded211ff5e3cbf7
+Copyright (c) 2026 Kahlil Gibran Al Zulmi and SOROT contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,3 +19,5 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Third-party components and disclaimers are listed in the NOTICE file.

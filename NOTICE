@@ -1,0 +1,197 @@
+SOROT — Third-Party Notices, Attributions, and Disclaimers
+================================================================
+
+Copyright (c) 2026 Kahlil Gibran Al Zulmi and SOROT contributors
+
+This project is licensed under the MIT License (see LICENSE). This file lists
+third-party software, adapted methods, and legal notices required for
+distribution.
+
+
+IMPORTANT — EDUCATIONAL USE AND THIRD-PARTY TERMS
+-------------------------------------------------
+
+SOROT is intended for academic and laboratory research, teaching, and
+non-commercial experimentation. It is NOT production eye-tracking software and
+is NOT endorsed by any eye-tracking hardware or software vendor.
+
+Use with caution:
+
+  • Recording, parsing, or automating interaction with commercial eye-tracking
+    overlays, virtual cameras, or streaming tools may conflict with those
+    products' End User License Agreements (EULAs), terms of service, or
+    acceptable-use policies.
+
+  • You are solely responsible for compliance with all applicable licenses,
+    privacy laws (including human-subjects and GDPR-style requirements), and
+    institutional review policies before collecting or analyzing gaze data.
+
+  • Do not use this software to circumvent technical protection measures or
+    vendor restrictions. The authors provide no warranty and accept no
+    liability for misuse.
+
+
+TOBII — TRADEMARK AND NON-AFFILIATION
+-------------------------------------
+
+"Tobii", "Tobii Ghost", and related marks are trademarks of Tobii AB (or its
+affiliates). SOROT is an independent academic-laboratory project and is NOT
+affiliated with, sponsored by, or endorsed by Tobii AB.
+
+SOROT does not include Tobii SDKs, drivers, or proprietary binaries. Where the
+code references Tobii Ghost, it refers only to publicly visible on-screen
+overlay graphics (e.g. a cyan gaze indicator) that may appear in user-provided
+screen recordings, and to optional process-name checks for "SSOverlay.exe" as a
+convenience hook for lab workflows. No Tobii source code is copied into this
+repository.
+
+
+ALGORITHMS AND METHODS (ADAPTED / IMPLEMENTED IN-REPO)
+------------------------------------------------------
+
+The following describes logic implemented in this codebase. It is provided for
+transparency, not as a claim of novelty or clinical validity.
+
+1. Tobii Ghost overlay — Hough circle detection (server-side)
+   - Files: sorot.py, gaze_post_processor.py, validation_points.py,
+     legacy/tests/test_roi_gaze_webapp.py
+   - Method: OpenCV cv2.HoughCircles on grayscale frames (median blur,
+     HOUGH_GRADIENT) to locate a circular gaze marker in recorded video.
+   - Parameters (e.g. param1/param2, min/max radius) are empirically tuned for
+     lab capture setups; they are not supplied by Tobii.
+   - Basis: Classical circle Hough transform as implemented in OpenCV
+     (see OpenCV attribution below).
+
+2. Tobii Ghost overlay — color-threshold marker detection (client-side)
+   - File: frontend/src/workers/analyzerWorker.ts
+   - Method: Heuristic BGRA/RGBA thresholding for cyan ring and bright core
+     colors associated with the Tobii Ghost on-screen indicator, plus centroid
+     of matched pixels; optional pixel stride for performance.
+   - Basis: In-house lab tuning on OBS-captured footage; independent of Tobii
+     SDK APIs. Documented in source comments for reproducibility.
+
+3. Fixation grouping (velocity-threshold style, simplified)
+   - File: sorot.py (trajectory / fixation visualization)
+   - Method: Sequential gaze points grouped while successive samples remain
+     within a spatial radius (FIXATION_RADIUS) for a minimum frame count.
+   - Basis: Common dispersion-threshold fixation concept used in eye-tracking
+     literature; this implementation is a simplified teaching/research variant,
+     not a certified I-DT or I-VT classifier.
+
+4. Gaze heatmaps
+   - Files: sorot.py and related processing paths
+   - Method: 2D histogram of gaze positions with Gaussian smoothing
+     (OpenCV/numpy).
+   - Basis: Standard density-estimation visualization practice.
+
+5. ROI hit testing and metrics
+   - Files: frontend (e.g. gazeRoi.ts), sorot.py API layers
+   - Method: Axis-aligned bounding boxes and scene frame ranges for dwell /
+     entry statistics.
+   - Basis: Standard computational geometry; no external algorithm source
+     copied.
+
+6. Optional integrations
+   - OBS WebSocket (obs-websocket-py): start/stop recording when configured.
+   - yt-dlp: download stimulus videos when permitted by site terms.
+   - Virtual camera index: reads frames from a user-selected capture device.
+
+If you publish academic work using SOROT, cite this repository and document
+your hardware, sampling rate, calibration, and detection parameters.
+
+
+FRONTEND DEPENDENCIES (npm)
+---------------------------
+
+Versions are pinned in frontend/package-lock.json. Primary runtime and build
+dependencies:
+
+  Package              License (typical)     Role
+  -------------------  --------------------  ---------------------------
+  vue                  MIT                   UI framework
+  vite                 MIT                   Build tool and dev server
+  pinia                MIT                   State management
+  tailwindcss          MIT                   Utility-first CSS
+  @tailwindcss/vite    MIT                   Tailwind Vite integration
+  @vitejs/plugin-vue   MIT                   Vue SFC support for Vite
+  axios                MIT                   HTTP client
+  socket.io-client     MIT                   WebSocket client (Flask-SocketIO)
+  @lucide/vue, lucide  ISC                   Icons
+  typescript           Apache-2.0            Typing (dev)
+  vue-tsc              MIT                   Vue TypeScript check (dev)
+  concurrently         MIT                   Dev script runner (dev)
+
+Install tree may include additional transitive packages; run
+`npm ls --all` in frontend/ for a full lockfile-resolved list.
+
+
+PYTHON DEPENDENCIES (pip)
+-------------------------
+
+Declared in requirements.txt (exact versions resolved at install time):
+
+  Package              License (typical)     Role
+  -------------------  --------------------  ---------------------------
+  flask                BSD-3-Clause          Web application
+  flask-socketio       MIT                   WebSocket extension
+  python-socketio      MIT                   Socket.IO protocol
+  python-engineio      MIT                   Engine.IO protocol
+  werkzeug             BSD-3-Clause          WSGI utilities
+  simple-websocket     MIT                   WebSocket helper
+  opencv-python        Apache-2.0            Image/video processing
+  numpy                BSD                   Numerical arrays
+  pandas               BSD-3-Clause          Tabular gaze data
+  matplotlib           PSF-based             Plots and charts
+  reportlab            BSD                   PDF reports
+  openpyxl             MIT                   Excel export
+  Pillow               HPIL                  Image I/O
+  obs-websocket-py     MIT                   OBS control (optional)
+  yt-dlp               Unlicense             YouTube download (optional)
+  python-dateutil      Apache-2.0 / BSD      Date parsing
+  tqdm                 MPL-2.0               Progress bars
+  pyinstaller          GPL-2.0-or-later*     Portable builds (optional)
+
+  * PyInstaller is optional for packaging only. If you distribute binaries
+    built with PyInstaller, comply with its license and bundle this NOTICE.
+
+Optional runtime imports (not in requirements.txt):
+
+  psutil               BSD-3-Clause          Process detection for SSOverlay.exe
+                        (if installed)
+
+Use `pip install` and your environment's license reporting tools for exact
+transitive dependency trees.
+
+
+OTHER THIRD-PARTY COMPONENTS
+-----------------------------
+
+  • Bootstrap 5, Font Awesome 6 — loaded from CDN in legacy/templates/
+    (see legacy UI only); subject to those projects' licenses when used.
+
+  • Legacy UI also referenced Vue 3, Socket.IO, and Axios from public CDNs
+    (legacy/templates/index.html).
+
+  • Docker base images (node, python) — see Docker Hub license terms for the
+    images you choose in Dockerfile.
+
+
+OPENCV HOUGH CIRCLES — REFERENCE
+---------------------------------
+
+Circle detection uses OpenCV's implementation of the Hough gradient method
+for circles. For algorithm background, see OpenCV documentation and related
+literature on the Hough transform. OpenCV itself is attributed under the
+Apache License 2.0.
+
+
+HOW TO REPRODUCE LICENSE LISTS
+------------------------------
+
+  Frontend:  cd frontend && npm ls --all --omit=dev
+               (add --include=dev for build-time packages)
+  Python:      pip install pip-licenses && pip-licenses -r requirements.txt
+
+For questions about attribution in your fork, keep this NOTICE with your
+distribution and update the "Algorithms" section if you add new detection
+methods.
