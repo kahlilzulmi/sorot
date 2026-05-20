@@ -18,6 +18,7 @@
 						crossorigin="anonymous"
 						style="width: 100%;"
 						@loadedmetadata="onVideoLoaded"
+						@timeupdate="onTimeUpdate"
 					></video>
 					<canvas
 						ref="roiCanvasRef"
@@ -86,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoiCanvas } from '../../composables/useRoiCanvas'
 import PlaybackControls from './PlaybackControls.vue'
 
@@ -190,5 +191,46 @@ function onSliderInput(event: Event): void {
 
 function onVideoLoaded(): void {
 	syncCanvasToVideoLayout()
+}
+
+function seekVideoToFrame(frame: number): void {
+	const video = videoPlayerRef.value
+	if (!video || !props.videoInfo || props.videoInfo.fps <= 0) return
+	const targetTime = frame / props.videoInfo.fps + 0.001
+	if (Math.abs(video.currentTime - targetTime) > 0.02) {
+		video.currentTime = targetTime
+	}
+	if (!props.playing) {
+		video.pause()
+	}
+}
+
+watch(
+	() => props.currentFrame,
+	(frame) => {
+		seekVideoToFrame(frame)
+	}
+)
+
+watch(
+	() => props.playing,
+	(isPlaying) => {
+		const video = videoPlayerRef.value
+		if (!video) return
+		if (isPlaying) {
+			void video.play()
+		} else {
+			video.pause()
+		}
+	}
+)
+
+function onTimeUpdate(): void {
+	const video = videoPlayerRef.value
+	if (!video || !props.videoInfo || props.videoInfo.fps <= 0 || !props.playing) return
+	const frame = Math.round(video.currentTime * props.videoInfo.fps)
+	if (frame !== props.currentFrame) {
+		emit('frame-change', frame)
+	}
 }
 </script>

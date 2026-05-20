@@ -1,5 +1,4 @@
 <template>
-	<!-- Pattern: layout child, receives display state and emits toolbar actions. -->
 	<header class="app-header">
 		<div class="header-left">
 			<button
@@ -10,7 +9,7 @@
 				aria-label="Back to mode selector"
 				aria-keyshortcuts="H"
 			>
-				<House class="header-icon"/>
+				<House class="header-icon" />
 			</button>
 			<div class="header-title">
 				<img src="/favicon-16x16.png" alt="SOROT logo" class="header-logo" />
@@ -25,8 +24,6 @@
 				type="button"
 				@click="$emit('new-project')"
 				title="Create new workspace (Ctrl+N)"
-				aria-label="Create new workspace"
-				aria-keyshortcuts="Control+N"
 			>
 				<Plus class="header-icon" /> New
 			</button>
@@ -35,32 +32,75 @@
 				type="button"
 				@click="$emit('open-project')"
 				title="Open workspace JSON (Ctrl+O)"
-				aria-label="Open workspace"
-				aria-keyshortcuts="Control+O"
 			>
 				<FolderOpen class="header-icon" /> Open
 			</button>
 			<button
 				class="btn btn-secondary btn-sm"
 				type="button"
-				@click="$emit('save-workspace')"
 				:disabled="!hasVideo"
-				title="Save workspace (Ctrl+S)"
-				aria-label="Save workspace"
-				aria-keyshortcuts="Control+S"
+				@click="$emit('save-workspace')"
 			>
 				<Save class="header-icon" /> Save
 			</button>
 			<button
 				class="btn btn-secondary btn-sm"
 				type="button"
-				@click="$emit('save-workspace-as')"
 				:disabled="!hasVideo"
-				title="Save workspace as (Ctrl+Shift+S)"
-				aria-label="Save workspace as"
-				aria-keyshortcuts="Control+Shift+S"
+				@click="$emit('save-workspace-as')"
 			>
 				<SaveAll class="header-icon" /> Save As
+			</button>
+
+			<div class="btn-group">
+				<button
+					class="btn btn-secondary btn-sm"
+					type="button"
+					:disabled="!hasVideo || !hasScenes"
+					@click="$emit('export-csv')"
+				>
+					<FileText class="header-icon" /> Export CSV
+				</button>
+				<button
+					class="btn btn-secondary btn-sm"
+					type="button"
+					:disabled="!hasVideo || !hasScenes"
+					@click="$emit('export-json')"
+					title="Export JSON"
+				>
+					<FileJson class="header-icon" />
+				</button>
+			</div>
+
+			<div v-if="appMode === 'live'" class="btn-divider"></div>
+
+			<button
+				v-if="appMode === 'live'"
+				class="btn btn-danger btn-sm"
+				type="button"
+				:disabled="!hasVideo"
+				@click="$emit('open-record')"
+			>
+				<Circle class="header-icon" /> Record
+			</button>
+			<button
+				v-if="appMode === 'live'"
+				class="btn btn-info btn-sm"
+				type="button"
+				:disabled="!hasVideo"
+				@click="$emit('open-process')"
+			>
+				<Settings class="header-icon" /> Post-process
+			</button>
+
+			<button
+				v-if="appMode === 'import'"
+				class="btn btn-success btn-sm"
+				type="button"
+				:disabled="!hasVideo || !hasScenes"
+				@click="$emit('open-import')"
+			>
+				<BarChart3 class="header-icon" /> Import data
 			</button>
 		</div>
 	</header>
@@ -68,22 +108,36 @@
 
 <script setup lang="ts">
 import type { AppMode } from '../../composables/useWorkspaceState'
-import { House, Plus, FolderOpen, Save, SaveAll } from '@lucide/vue'
+import {
+	BarChart3,
+	Circle,
+	FileJson,
+	FileText,
+	FolderOpen,
+	House,
+	Plus,
+	Save,
+	SaveAll,
+	Settings
+} from '@lucide/vue'
 
-// Parent-controlled display inputs.
 defineProps<{
 	appMode: AppMode
 	modeTitle: string
 	hasVideo: boolean
+	hasScenes: boolean
 }>()
 
-// Parent handles behavior for these actions.
 defineEmits<{
 	(e: 'back'): void
 	(e: 'new-project'): void
 	(e: 'open-project'): void
 	(e: 'save-workspace'): void
 	(e: 'save-workspace-as'): void
+	(e: 'export-csv'): void
+	(e: 'export-json'): void
+	(e: 'open-record'): void
+	(e: 'open-process'): void
+	(e: 'open-import'): void
 }>()
 </script>
-
