@@ -3,9 +3,19 @@
 	<div v-if="appMode === 'select'" class="mode-selector-overlay">
 		<div class="mode-selector-container">
 			<div class="mode-selector-header">
-				<img src="/sorot-icon.png" alt="SOROT logo" class="mode-logo" />
+				<img src="/sorot-logo.svg" alt="SOROT logo" class="mode-logo" width="96" height="96" />
 				<h1>SOROT</h1>
 				<p>System for Optimized Region of Interest Tracking</p>
+			</div>
+			<div class="mode-health-strip">
+				<span :class="['health-pill', backendReady ? 'health-ok' : 'health-warn']">
+					Backend {{ backendReady ? 'ready' : 'waiting' }}
+				</span>
+				<span :class="['health-pill', socketConnected ? 'health-ok' : 'health-warn']">
+					Socket {{ socketConnected ? 'connected' : 'disconnected' }}
+				</span>
+				<span class="health-pill">{{ gazeSourceLabel }}</span>
+				<span v-if="lastGazeAt" class="health-pill">Last gaze: {{ lastGazeAt }}</span>
 			</div>
 
 			<div class="mode-cards">
@@ -44,7 +54,13 @@ import type { AppMode } from '../../composables/useWorkspaceState'
 import { TvMinimalPlay, Import } from '@lucide/vue'
 
 // Input-only contract from parent.
-defineProps<{ appMode: AppMode }>()
+defineProps<{
+	appMode: AppMode
+	backendReady: boolean
+	socketConnected: boolean
+	gazeSourceLabel: string
+	lastGazeAt: string | null
+}>()
 
 // Output-only contract back to parent.
 defineEmits<{

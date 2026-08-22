@@ -1,11 +1,15 @@
-# Legacy web UI
+# Legacy web UI (archived)
 
-Pre-Vite interface built with CDN Vue 3, Jinja templates, and `static/js/app.js`.
+The legacy editor is archived under `_archived/`. **`/legacy/` redirects to `/`**.
 
-- **URL**: http://localhost:5000/legacy/ (when the Flask backend is running)
-- **Settings**: http://localhost:5000/legacy/settings
+| URL | Status |
+|-----|--------|
+| `/` | Primary Vue 3 editor |
+| `/settings` | Settings and diagnostics (Vue) |
+| `/legacy/settings` | Redirects to `/settings` |
+| `/legacy/test-gaze` | ROI/gaze connection test page (still served) |
 
-New development should use the Vue 3 app in `frontend/`. This tree is kept for reference and gradual migration of any remaining features.
+New development: **`frontend/`** only.
 
 ## Standalone gaze test server
 

@@ -121,9 +121,18 @@ sorot/
 
 Runtime directories (`uploaded_videos/`, `sessions/`, etc.) are created automatically and are gitignored.
 
-## Legacy UI
+## Legacy UI (archived)
 
-The pre-Vite interface lives under `legacy/` and is served at **http://localhost:5000/legacy/** when the backend is running. Do not add new features there; use `frontend/` instead.
+The pre-Vite editor is **archived** under `legacy/_archived/` (not deleted). **`/legacy/` redirects to `/`**.
+
+| URL | Purpose |
+|-----|---------|
+| `/` | Primary Vue 3 editor |
+| `/settings` | OBS/diagnostics configuration (Vue) |
+| `/legacy/settings` | Redirects to `/settings` |
+| `/legacy/test-gaze` | Legacy ROI/gaze test page |
+
+Do not add features under `legacy/`; use `frontend/` only.
 
 ## Documentation
 

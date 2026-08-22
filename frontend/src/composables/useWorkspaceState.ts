@@ -20,6 +20,10 @@ export interface WorkspaceState {
 	scenes: WorkspaceScene[]
 	currentFrame: number
 	showNewVideoModal: boolean
+	showRecordModal: boolean
+	showProcessModal: boolean
+	showImportModal: boolean
+	showROIModal: boolean
 	lastUpdated: string | null
 	currentWorkspaceFile: string | null
 }
@@ -107,6 +111,10 @@ export function useWorkspaceState(): WorkspaceStateApi {
 		scenes: [],
 		currentFrame: 0,
 		showNewVideoModal: false,
+		showRecordModal: false,
+		showProcessModal: false,
+		showImportModal: false,
+		showROIModal: false,
 		lastUpdated: null,
 		currentWorkspaceFile: initialNavigation.workspaceFile
 	})

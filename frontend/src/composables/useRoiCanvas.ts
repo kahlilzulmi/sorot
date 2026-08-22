@@ -1,10 +1,8 @@
 import { onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useGazeStore } from '../stores/useGazeStore'
-import type { RegionOfInterest } from '../types/gaze'
-import type { RoiBounds } from '../stores/useGazeStore'
+import type { WorkspaceRoi } from '../types/workspace'
+import type { RoiBounds } from './useRoiEditor'
 import { MIN_ROI_DIMENSION } from '../constants/gaze'
-import { findRoiIndexForGaze, getGazeSampleAtTime } from '../utils/gazeRoi'
+import { findRoiIndexForGaze } from '../utils/gazeRoi'
 import {
 	syncCanvasToVideoLayout,
 	type VideoContentLayout
@@ -41,11 +39,20 @@ export function useRoiCanvas(
 	videoRef: Ref<HTMLVideoElement | null>,
 	containerRef: Ref<HTMLElement | null>,
 	disabled: Ref<boolean>,
+	model: {
+		getRois: () => WorkspaceRoi[]
+		getSelectedRoiIndex: () => number | null
+		selectRoi: (index: number | null) => void
+		updateRoiBounds: (index: number, bounds: RoiBounds) => void
+		onNewRoiDrawn: (bounds: RoiBounds) => void
+	},
+	gaze: {
+		getCurrentGaze: () => { x: number; y: number } | null
+		getRevision: () => number
+	},
+	onCommit?: () => void,
 	onAfterRender?: () => void
 ) {
-	const gazeStore = useGazeStore()
-	const { regionsOfInterest, selectedRoiIndex, gazeDataRevision, currentTime } = storeToRefs(gazeStore)
-
 	const layout = ref<VideoContentLayout | null>(null)
 	const drawing = ref(false)
 	const editing = ref(false)
@@ -95,10 +102,12 @@ export function useRoiCanvas(
 
 	function getRoiAtPoint(x: number, y: number): RoiHitResult | null {
 		const hitRadius = handleHitRadiusVideoPx()
+		const rois = model.getRois()
+		const selectedRoiIndex = model.getSelectedRoiIndex()
 
-		for (let index = regionsOfInterest.value.length - 1; index >= 0; index -= 1) {
-			const roi = regionsOfInterest.value[index]
-			if (selectedRoiIndex.value === index) {
+		for (let index = rois.length - 1; index >= 0; index -= 1) {
+			const roi = rois[index]
+			if (selectedRoiIndex === index) {
 				if (Math.abs(x - roi.x) <= hitRadius && Math.abs(y - roi.y) <= hitRadius) {
 					return { roiIndex: index, handle: 'tl' }
 				}
@@ -146,7 +155,7 @@ export function useRoiCanvas(
 
 	function drawRoiLabel(
 		context: CanvasRenderingContext2D,
-		roi: RegionOfInterest,
+		roi: WorkspaceRoi,
 		label: string,
 		color: string,
 		canvasHeight: number
@@ -177,15 +186,6 @@ export function useRoiCanvas(
 		context.strokeRect(x - size / 2, y - size / 2, size, size)
 	}
 
-	function updateGazeInsideIndex(): void {
-		const sample = getGazeSampleAtTime(gazeStore.gazeCoordinates, currentTime.value)
-		if (!sample) {
-			gazeInsideRoiIndex.value = null
-			return
-		}
-		gazeInsideRoiIndex.value = findRoiIndexForGaze(sample, regionsOfInterest.value)
-	}
-
 	function renderRois(previewBounds?: RoiBounds): void {
 		const canvas = canvasRef.value
 		if (!canvas) return
@@ -193,15 +193,18 @@ export function useRoiCanvas(
 		const context = canvas.getContext('2d')
 		if (!context) return
 
-		updateGazeInsideIndex()
+		const currentGaze = gaze.getCurrentGaze()
+		const rois = model.getRois()
+		gazeInsideRoiIndex.value = currentGaze ? findRoiIndexForGaze(currentGaze, rois) : null
 		context.clearRect(0, 0, canvas.width, canvas.height)
 		if (disabled.value) {
 			onAfterRender?.()
 			return
 		}
 
-		regionsOfInterest.value.forEach((roi: RegionOfInterest, index: number) => {
-			const isSelected = index === selectedRoiIndex.value
+		const selectedRoiIndex = model.getSelectedRoiIndex()
+		rois.forEach((roi: WorkspaceRoi, index: number) => {
+			const isSelected = index === selectedRoiIndex
 			const isHovered = index === hoverRoiIndex.value
 			const gazeInside = index === gazeInsideRoiIndex.value
 			const color = roi.color_tag ?? '#61AFEF'
@@ -240,6 +243,23 @@ export function useRoiCanvas(
 			context.strokeRect(previewBounds.x, previewBounds.y, previewBounds.width, previewBounds.height)
 		}
 
+		if (currentGaze) {
+			context.save()
+			context.beginPath()
+			context.arc(currentGaze.x, currentGaze.y, 6, 0, Math.PI * 2)
+			context.fillStyle = '#E5C07B'
+			context.fill()
+			context.lineWidth = 2
+			context.strokeStyle = '#1E2127'
+			context.stroke()
+			context.beginPath()
+			context.arc(currentGaze.x, currentGaze.y, 14, 0, Math.PI * 2)
+			context.strokeStyle = 'rgba(229, 192, 123, 0.35)'
+			context.lineWidth = 2
+			context.stroke()
+			context.restore()
+		}
+
 		onAfterRender?.()
 	}
 
@@ -249,7 +269,8 @@ export function useRoiCanvas(
 		const canvas = canvasRef.value
 		if (!canvas) return
 
-		const roi = regionsOfInterest.value[editRoiIndex.value]
+		const rois = model.getRois()
+		const roi = rois[editRoiIndex.value]
 		if (!roi) return
 
 		const deltaX = mouseX - dragStartX.value
@@ -284,7 +305,7 @@ export function useRoiCanvas(
 			nextHeight = Math.max(MIN_ROI_DIMENSION, Math.min(maxY - source.y, source.height + deltaY))
 		}
 
-		gazeStore.updateRoiBounds(editRoiIndex.value, {
+		model.updateRoiBounds(editRoiIndex.value, {
 			x: nextX,
 			y: nextY,
 			width: nextWidth,
@@ -294,7 +315,8 @@ export function useRoiCanvas(
 	}
 
 	function startEditRoi(hit: RoiHitResult, mouseX: number, mouseY: number): void {
-		const roi = regionsOfInterest.value[hit.roiIndex]
+		const rois = model.getRois()
+		const roi = rois[hit.roiIndex]
 		if (!roi) return
 
 		editing.value = true
@@ -308,7 +330,7 @@ export function useRoiCanvas(
 			width: roi.width,
 			height: roi.height
 		}
-		gazeStore.selectRoi(hit.roiIndex)
+		model.selectRoi(hit.roiIndex)
 	}
 
 	function onMouseDown(event: MouseEvent): void {
@@ -365,6 +387,7 @@ export function useRoiCanvas(
 			resizeHandle.value = null
 			originalRoi.value = null
 			renderRois()
+			onCommit?.()
 			return
 		}
 
@@ -383,7 +406,9 @@ export function useRoiCanvas(
 			width: Math.abs(point.x - startX.value),
 			height: Math.abs(point.y - startY.value)
 		}
-		gazeStore.addRegionOfInterest(bounds)
+		if (bounds.width >= MIN_ROI_DIMENSION && bounds.height >= MIN_ROI_DIMENSION) {
+			model.onNewRoiDrawn(bounds)
+		}
 		renderRois()
 	}
 
@@ -394,6 +419,7 @@ export function useRoiCanvas(
 		resizeHandle.value = null
 		originalRoi.value = null
 		renderRois()
+		onCommit?.()
 	}
 
 	onMounted(() => {
@@ -429,11 +455,19 @@ export function useRoiCanvas(
 		window.removeEventListener('resize', syncCanvasToVideoLayoutHook)
 	})
 
-	watch(regionsOfInterest, () => {
+	watch(() => model.getRois(), () => {
 		renderRois()
 	}, { deep: true })
 
-	watch([selectedRoiIndex, disabled, currentTime, gazeDataRevision], () => {
+	watch(() => model.getSelectedRoiIndex(), () => {
+		renderRois()
+	})
+
+	watch(disabled, () => {
+		renderRois()
+	})
+
+	watch(() => gaze.getRevision(), () => {
 		renderRois()
 	})
 

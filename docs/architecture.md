@@ -36,9 +36,9 @@ flowchart LR
 |------|------------|-----|
 | **Development** | `.\dev.ps1` or `npm run dev:all` in `frontend/` | http://localhost:5173 (Vite → proxies to Flask :5000) |
 | **Production / Docker** | `npm run build` then `python sorot.py`, or `docker compose up` | http://localhost:5000 (Flask serves `static/dist/`) |
-| **Legacy (archived)** | Flask backend only | http://localhost:5000/legacy/ |
+| **Legacy settings** | Flask backend | http://localhost:5000/legacy/settings → redirects to `/settings` |
 
-The Vue app is the only supported surface for new features. See `legacy/README.md` for the old CDN-Vue stack.
+`/legacy/` redirects to `/`. Settings and diagnostics live at **`/settings`** in the Vue app.
 
 ## Data on disk
 

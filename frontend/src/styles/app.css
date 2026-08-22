@@ -1468,6 +1468,20 @@ body {
     max-width: 700px;
 }
 
+.import-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.import-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+}
+
 .import-step {
     margin-bottom: 25px;
     padding: 20px;
@@ -1934,18 +1948,27 @@ body {
 .mode-selector-header {
     text-align: center;
     color: var(--color-text);
-    margin-bottom: 40px;
+    margin-bottom: 32px;
+}
+
+.mode-selector-header .mode-logo {
+    display: block;
+    width: 96px;
+    height: 96px;
+    margin: 0 auto 16px;
+    object-fit: contain;
 }
 
 .mode-selector-header h1 {
     font-size: 42px;
-    margin-bottom: 10px;
+    margin: 0 0 10px;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     color: var(--color-accent);
 }
 
 .mode-selector-header p {
     font-size: 18px;
+    margin: 0;
     opacity: 0.9;
     color: var(--color-text-dim);
 }
@@ -1954,6 +1977,33 @@ body {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 30px;
+}
+
+.mode-health-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin: 8px 0 18px 0;
+}
+
+.health-pill {
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: rgba(40, 44, 52, 0.95);
+    color: var(--color-text);
+}
+
+.health-pill.health-ok {
+    border-color: #98C379;
+    color: #98C379;
+}
+
+.health-pill.health-warn {
+    border-color: #E5C07B;
+    color: #E5C07B;
 }
 
 .mode-card {

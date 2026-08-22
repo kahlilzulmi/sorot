@@ -22,7 +22,7 @@ Open http://localhost:5000.
 
 ## Environment variables
 
-Copy `.env.example` to `.env` and set `FLASK_SECRET_KEY` before any shared or production deployment. OBS connection settings can live in `.env` or in the legacy **Settings** page at `/legacy/settings`.
+Copy `.env.example` to `.env` and set `FLASK_SECRET_KEY` before any shared or production deployment. OBS connection settings can live in `.env` or in the app **Settings** page at `/settings`.
 
 | Variable | Default | Purpose |
 |----------|---------|---------|

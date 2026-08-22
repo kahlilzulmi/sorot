@@ -1,5 +1,6 @@
 import type { GazeCoordinate } from '../types/gaze'
-import { useGazeStore, type GazeImportSummary } from '../stores/useGazeStore'
+import type { GazeImportSummary } from '../types/gazeImport'
+import { useGazeStore } from '../stores/useGazeStore'
 import {
 	normalizeCsvText,
 	parseCsvRecord,

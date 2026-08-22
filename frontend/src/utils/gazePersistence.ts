@@ -1,19 +1,23 @@
-import type { GazeCoordinate, RegionOfInterest } from '../types/gaze'
-import type { GazeImportSummary } from '../stores/useGazeStore'
+import type { GazeCoordinate } from '../types/gaze'
+import type { GazeImportSummary } from '../types/gazeImport'
 
 const DB_NAME = 'sorot-local'
 const DB_VERSION = 1
 const STORE_NAME = 'workspace'
 const WORKSPACE_KEY = 'current'
 
-export interface PersistedWorkspace {
+export interface PersistedGazeSnapshot {
 	gazeCoordinates: GazeCoordinate[]
-	regionsOfInterest: RegionOfInterest[]
 	sourceFileName: string | null
 	videoFileName: string | null
 	videoFps: number | null
 	importSummary: GazeImportSummary | null
 	savedAt: string
+}
+
+/** @deprecated Legacy snapshot shape; ROIs are ignored on restore (scene ROIs come from workspace JSON). */
+export interface LegacyPersistedWorkspace extends PersistedGazeSnapshot {
+	regionsOfInterest?: unknown[]
 }
 
 function openDatabase(): Promise<IDBDatabase> {
@@ -63,8 +67,19 @@ function runTransaction<T>(
 	)
 }
 
-/** Persist gaze, ROIs, and video metadata locally (no file blobs). */
-export async function saveWorkspaceSnapshot(snapshot: PersistedWorkspace): Promise<void> {
+function normalizeSnapshot(record: LegacyPersistedWorkspace): PersistedGazeSnapshot {
+	return {
+		gazeCoordinates: record.gazeCoordinates ?? [],
+		sourceFileName: record.sourceFileName ?? null,
+		videoFileName: record.videoFileName ?? null,
+		videoFps: record.videoFps ?? null,
+		importSummary: record.importSummary ?? null,
+		savedAt: record.savedAt ?? new Date().toISOString()
+	}
+}
+
+/** Persist imported gaze and video metadata locally (no file blobs). */
+export async function saveWorkspaceSnapshot(snapshot: PersistedGazeSnapshot): Promise<void> {
 	if (typeof indexedDB === 'undefined') {
 		return
 	}
@@ -74,17 +89,18 @@ export async function saveWorkspaceSnapshot(snapshot: PersistedWorkspace): Promi
 	)
 }
 
-/** Restore last saved workspace, or null when none / unsupported. */
-export async function loadWorkspaceSnapshot(): Promise<PersistedWorkspace | null> {
+/** Restore last saved gaze snapshot, or null when none / unsupported. */
+export async function loadWorkspaceSnapshot(): Promise<PersistedGazeSnapshot | null> {
 	if (typeof indexedDB === 'undefined') {
 		return null
 	}
 
 	try {
-		const record = await runTransaction<PersistedWorkspace | undefined>('readonly', (store) =>
+		const record = await runTransaction<LegacyPersistedWorkspace | undefined>('readonly', (store) =>
 			store.get(WORKSPACE_KEY)
 		)
-		return record ?? null
+		if (!record) return null
+		return normalizeSnapshot(record)
 	} catch {
 		return null
 	}

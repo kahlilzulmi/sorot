@@ -1,4 +1,4 @@
-from flask import Flask, Blueprint, render_template, request, jsonify, send_from_directory, Response, abort
+from flask import Flask, Blueprint, render_template, request, jsonify, send_from_directory, Response, abort, redirect
 from flask_socketio import SocketIO, emit
 import cv2
 import numpy as np
@@ -99,7 +99,8 @@ def _vue_build_ready():
 
 @legacy_ui.route('/')
 def legacy_index():
-    return render_template('index.html')
+    """Deprecated: main editor is the Vite app at /."""
+    return redirect('/', code=302)
 
 
 @legacy_ui.route('/test-gaze')
@@ -110,7 +111,8 @@ def legacy_test_gaze():
 
 @legacy_ui.route('/settings')
 def legacy_settings():
-    return render_template('settings.html')
+    """Deprecated: settings migrated to Vue app."""
+    return redirect('/settings', code=302)
 
 
 app.register_blueprint(legacy_ui)
@@ -439,7 +441,25 @@ def index():
         '<pre>cd frontend &amp;&amp; npm install &amp;&amp; npm run dev</pre>'
         '<p>Then open <a href="http://localhost:5173">http://localhost:5173</a> (API on port 5000).</p>'
         '<p>Production / Docker: <code>cd frontend &amp;&amp; npm run build</code>, then reload this page.</p>'
-        '<p>Legacy UI: <a href="/legacy/">/legacy/</a></p>'
+        '<p>System settings: <a href="/settings">/settings</a></p>'
+        '</body></html>',
+        200,
+        {'Content-Type': 'text/html; charset=utf-8'},
+    )
+
+
+@app.route('/settings')
+def settings_page():
+    """Serve Vue settings view (same SPA bundle as /)."""
+    if _vue_build_ready():
+        return send_from_directory(DIST_DIR, 'index.html')
+    return (
+        '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
+        '<title>SOROT Settings</title></head><body style="font-family:system-ui,sans-serif;max-width:40rem;margin:2rem auto">'
+        '<h1>SOROT Settings</h1>'
+        '<p>Run the Vite dev server for settings UI:</p>'
+        '<pre>cd frontend &amp;&amp; npm run dev</pre>'
+        '<p>Then open <a href="http://localhost:5173/settings">http://localhost:5173/settings</a></p>'
         '</body></html>',
         200,
         {'Content-Type': 'text/html; charset=utf-8'},

@@ -11,7 +11,7 @@
 				<div
 					v-for="(roi, idx) in currentScene.rois"
 					:key="`${roi.label}-${idx}`"
-					:class="['roi-item', { active: selectedROIIdx === idx }]"
+					:class="['roi-item', { active: selectedRoiIdx === idx }]"
 					:style="{ borderLeftColor: roi.color_tag || '#61AFEF', borderLeftWidth: '4px', borderLeftStyle: 'solid' }"
 					@click="$emit('select-roi', idx)"
 				>
@@ -65,7 +65,7 @@ const openMenuIdx = ref<number | null>(null)
 
 defineProps<{
 	currentScene: Scene | null
-	selectedROIIdx: number
+	selectedRoiIdx: number
 }>()
 
 defineEmits<{

@@ -14,9 +14,24 @@
 					@click="$emit('select-scene', idx)"
 				>
 					<div class="scene-header">
-						<div class="scene-title">
+						<div v-if="editingSceneIdx === idx" class="scene-title-edit" @click.stop>
+							<strong>{{ scene.name }}</strong> -
+							<input
+								:id="`scene-input-${idx}`"
+								v-model="editingCustomName"
+								class="inline-edit-input"
+								type="text"
+								placeholder="Custom name"
+								style="width: 140px;"
+								@blur="finishRename(idx)"
+								@keydown.enter.prevent="finishRename(idx)"
+								@keydown.esc.prevent="cancelRename"
+							>
+						</div>
+						<div v-else class="scene-title" style="cursor: pointer;" @dblclick.stop="startRename(idx)">
 							<strong>{{ scene.name }}</strong>
 							<span v-if="scene.custom_name"> - {{ scene.custom_name }}</span>
+							<span v-else style="color: #999;"> - (no custom name)</span>
 						</div>
 					</div>
 
@@ -41,7 +56,7 @@
 							<MoreVertical class="header-icon" />
 						</button>
 						<div v-if="openMenuIdx === idx" class="dropdown-menu" @click.stop>
-							<button class="menu-item" type="button" @click="$emit('rename-scene', idx)">
+							<button class="menu-item" type="button" @click="startRenameFromMenu(idx)">
 								<Edit2 class="header-icon" /> Rename
 							</button>
 							<button class="menu-item menu-delete" type="button" @click="$emit('delete-scene', idx)">
@@ -62,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { Clapperboard, Edit2, MoreVertical, Plus, Trash2 } from '@lucide/vue'
 
 interface Roi {
@@ -87,6 +102,8 @@ interface VideoInfo {
 }
 
 const openMenuIdx = ref<number | null>(null)
+const editingSceneIdx = ref<number | null>(null)
+const editingCustomName = ref('')
 
 const props = defineProps<{
 	scenes: Scene[]
@@ -94,15 +111,42 @@ const props = defineProps<{
 	videoInfo: VideoInfo | null
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
 	(e: 'select-scene', index: number): void
 	(e: 'add-scene'): void
-	(e: 'rename-scene', index: number): void
+	(e: 'rename-scene', index: number, customName: string): void
 	(e: 'delete-scene', index: number): void
 }>()
 
 function toggleMenu(index: number): void {
 	openMenuIdx.value = openMenuIdx.value === index ? null : index
+}
+
+function startRename(index: number): void {
+	editingSceneIdx.value = index
+	editingCustomName.value = props.scenes[index]?.custom_name ?? ''
+	openMenuIdx.value = null
+	void nextTick(() => {
+		const input = document.querySelector<HTMLInputElement>(`#scene-input-${index}`)
+		input?.focus()
+		input?.select()
+	})
+}
+
+function startRenameFromMenu(index: number): void {
+	startRename(index)
+}
+
+function finishRename(index: number): void {
+	if (editingSceneIdx.value !== index) return
+	emit('rename-scene', index, editingCustomName.value.trim())
+	editingSceneIdx.value = null
+	editingCustomName.value = ''
+}
+
+function cancelRename(): void {
+	editingSceneIdx.value = null
+	editingCustomName.value = ''
 }
 
 function thumbnailUrl(frame: number): string {
