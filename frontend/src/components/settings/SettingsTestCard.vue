@@ -1,7 +1,7 @@
 <template>
 	<div class="settings-test-card">
 		<h4>{{ title }}</h4>
-		<p class="help-text">{{ description }}</p>
+		<p class="settings-test-desc">{{ description }}</p>
 		<button class="btn btn-secondary btn-sm" type="button" :disabled="result.tone === 'loading'" @click="$emit('run')">
 			{{ result.tone === 'loading' ? 'Testing...' : 'Test' }}
 		</button>
@@ -27,32 +27,53 @@ defineEmits<{
 
 <style scoped>
 .settings-test-card {
-	border: 1px solid var(--color-border, #ddd);
+	border: 1px solid var(--color-border);
 	border-radius: 8px;
 	padding: 16px;
-	background: #fff;
+	background: var(--color-background);
+	color: var(--color-text);
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	min-height: 150px;
+}
+
+.settings-test-card h4 {
+	margin: 0;
+	font-size: 14px;
+	color: var(--color-text);
+}
+
+.settings-test-desc {
+	margin: 0;
+	flex: 1;
+	font-size: 12px;
+	color: var(--color-text-dim);
 }
 
 .settings-test-result {
-	margin-top: 10px;
-	padding: 10px;
+	margin-top: 4px;
+	padding: 8px 10px;
 	border-radius: 6px;
-	font-size: 13px;
+	font-size: 12px;
 }
 
 .settings-test-result.success {
-	background: #d4edda;
-	color: #155724;
+	background: rgba(152, 195, 121, 0.15);
+	color: var(--color-success);
+	border: 1px solid var(--color-success);
 }
 
 .settings-test-result.error {
-	background: #f8d7da;
-	color: #721c24;
+	background: rgba(224, 108, 117, 0.15);
+	color: var(--color-danger);
+	border: 1px solid var(--color-danger);
 }
 
 .settings-test-result.warning,
 .settings-test-result.loading {
-	background: #fff3cd;
-	color: #856404;
+	background: rgba(229, 192, 123, 0.15);
+	color: var(--color-warning);
+	border: 1px solid var(--color-warning);
 }
 </style>

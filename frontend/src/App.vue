@@ -111,6 +111,7 @@
 		/>
 
 		<NewVideoModal
+			ref="newVideoModalRef"
 			v-if="workspace.state.showNewVideoModal"
 			@close="workspace.state.showNewVideoModal = false"
 			@select-file="onNewVideoFile"
@@ -245,11 +246,13 @@ import { useLiveRecording } from './composables/useLiveRecording'
 import { useImportMode, type ImportVideoUploadResult } from './composables/useImportMode'
 import { usePostProcessing } from './composables/usePostProcessing'
 import { useDualVideo } from './composables/useDualVideo'
+import { useGazeDevices } from './composables/useGazeDevices'
 import { useGazePersistence } from './composables/useGazePersistence'
 
 const workspace = useWorkspaceState()
 const { modeTitle } = workspace
 const workspaceFileInputRef = ref<HTMLInputElement | null>(null)
+const newVideoModalRef = ref<InstanceType<typeof NewVideoModal> | null>(null)
 const appView = ref<'editor' | 'settings'>(readInitialAppView())
 
 function readInitialAppView(): 'editor' | 'settings' {
@@ -329,6 +332,7 @@ const roiEditor = useRoiEditor(scenesRef, currentScene, selectedRoiIdx)
 const { rois } = roiEditor
 const gazeSession = useGazeSession(currentTime)
 const { currentOverlaySample, revision: gazeRevision } = gazeSession
+const gazeDevices = useGazeDevices()
 const gazePersistence = useGazePersistence(gazeSession, videoInfoRef)
 const importMode = useImportMode(
 	videoInfoRef,
@@ -363,9 +367,10 @@ const hasImportedGaze = computed(() => gazeSession.importedGaze.value.length > 0
 const hasAnyRoi = computed(() => workspace.state.scenes.some((scene) => scene.rois.length > 0))
 const backendReady = computed(() => !!videoInfoRef.value || workspace.state.statusMessage !== 'Ready')
 const gazeSourceLabel = computed(() => {
+	const deviceName = gazeDevices.selectedDevice.value.name
 	if (gazeSession.importedGaze.value.length > 0) return 'Imported gaze loaded'
-	if (socket.connected.value) return 'Live gaze stream standby'
-	return 'No gaze source yet'
+	if (socket.connected.value) return `Live gaze · ${deviceName}`
+	return `${deviceName} (standby)`
 })
 
 function handleGazeDetected(payload: { x: number; y: number }): void {
@@ -408,6 +413,7 @@ async function onNewVideoFile(file: File): Promise<void> {
 async function onNewVideoYoutube(url: string): Promise<void> {
 	const ok = await video.downloadYoutube(url)
 	if (ok) workspace.state.showNewVideoModal = false
+	else newVideoModalRef.value?.resetYoutubeAttempt()
 }
 
 function onSelectScene(index: number): void {

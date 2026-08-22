@@ -44,3 +44,14 @@
 - What was decided: Move zero-byte `useHistory.js` (and sibling empty `.js` files) from `src/composables/` to `src/_archived/empty-js-stubs/` so Vite resolves the real `.ts` modules.
 - Why: Vite prefers `.js` over `.ts` for extensionless imports; empty stubs caused `does not provide an export named 'useHistory'`.
 - What was rejected and why: Leaving the stubs in place or deleting without archive was rejected; archive preserves evidence of the failure mode.
+
+## 2026-08-23 — Gaze device selection (phased)
+- What was decided: Phase 1 — frontend device registry (`types/gazeDevice.ts`), `GazeDeviceSelector` in settings, localStorage persistence, mouse fallback default, Tobii ET5 + major trackers as catalog entries, custom device add/remove. Defer Tobii Ghost overlay test card; device-aware tests in selector.
+- Why: User wants vendor-neutral device choice with extensibility (webcam/custom later) without hard-coding Tobii-only UX.
+- What was rejected and why: Single Tobii-only settings card and immediate backend SDK integrations — deferred to Phase 2–4.
+- Phases planned: (2) persist `gaze_device_id` in backend config, (3) route live gaze by transport (mouse, overlay, WebGazer), (4) custom device pipeline hooks.
+
+## 2026-08-23 — Settings page “CSS gone” restyle
+- What was decided: Restyle `SettingsView` / `SettingsTestCard` with scoped dark theme tokens and dedicated `settings-field` / `settings-input` (column layout). Keep global `app.css` loaded from `main.ts`.
+- Why: Settings looked broken (huge dark inputs, light bg, poor contrast) because light fallback + global horizontal `.input-group` / `.input-text` fought the dark editor theme—not because CSS failed to load entirely.
+- What was rejected and why: Relying on Bootstrap/legacy form classes or global `.input-group` for settings fields was rejected; those stretch inputs and clash with dark `.btn` / panel colors.

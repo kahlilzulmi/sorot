@@ -56,6 +56,14 @@ body {
     flex-direction: column;
 }
 
+.header-title .header-logo {
+    display: block;
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
 .header-title h1 {
     font-size: 20px;
     color: var(--color-accent);

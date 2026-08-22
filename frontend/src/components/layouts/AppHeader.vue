@@ -12,8 +12,10 @@
 				<House class="header-icon" />
 			</button>
 			<div class="header-title">
-				<img src="/favicon-16x16.png" alt="SOROT logo" class="header-logo" />
-				<h1>SOROT</h1>
+				<h1>
+					<img src="/sorot-logo.svg" alt="SOROT logo" class="header-logo" width="32" height="32" />
+					SOROT
+				</h1>
 				<p>{{ modeTitle }}</p>
 			</div>
 		</div>

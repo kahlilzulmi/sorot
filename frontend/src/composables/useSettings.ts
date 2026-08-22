@@ -57,7 +57,6 @@ export function useSettings() {
 	const configMessage = ref<TestResultState>(idleResult())
 	const importMessage = ref<TestResultState>(idleResult())
 	const obsTest = ref<TestResultState>(idleResult())
-	const tobiiTest = ref<TestResultState>(idleResult())
 	const cameraTest = ref<TestResultState>(idleResult())
 	const gazeTest = ref<TestResultState>(idleResult())
 	const videoFiles = ref<SettingsVideoFile[]>([])
@@ -141,22 +140,6 @@ export function useSettings() {
 		}
 	}
 
-	async function testTobii(): Promise<void> {
-		tobiiTest.value = { tone: 'loading', message: 'Checking Tobii Ghost overlay...' }
-		try {
-			const response = await apiPost<{ running?: boolean | null; message?: string }>('/api/settings/test-tobii')
-			if (response.running === true) {
-				tobiiTest.value = { tone: 'success', message: response.message ?? 'Tobii Ghost overlay is running.' }
-			} else if (response.running === false) {
-				tobiiTest.value = { tone: 'error', message: response.message ?? 'SSOverlay.exe is not running.' }
-			} else {
-				tobiiTest.value = { tone: 'warning', message: response.message ?? 'Overlay status unknown.' }
-			}
-		} catch (error) {
-			tobiiTest.value = { tone: 'error', message: error instanceof Error ? error.message : 'Tobii test failed' }
-		}
-	}
-
 	async function testVirtualCamera(): Promise<void> {
 		cameraTest.value = { tone: 'loading', message: 'Testing virtual camera...' }
 		try {
@@ -207,7 +190,6 @@ export function useSettings() {
 	async function runAllTests(): Promise<void> {
 		runningAllTests.value = true
 		await testObs()
-		await testTobii()
 		await testVirtualCamera()
 		await testGazeDetection()
 		runningAllTests.value = false
@@ -274,7 +256,6 @@ export function useSettings() {
 		configMessage,
 		importMessage,
 		obsTest,
-		tobiiTest,
 		cameraTest,
 		gazeTest,
 		videoFiles,
@@ -287,7 +268,6 @@ export function useSettings() {
 		loadConfig,
 		saveConfig,
 		testObs,
-		testTobii,
 		testVirtualCamera,
 		testGazeDetection,
 		runAllTests,
