@@ -51,7 +51,65 @@
 - What was rejected and why: Single Tobii-only settings card and immediate backend SDK integrations — deferred to Phase 2–4.
 - Phases planned: (2) persist `gaze_device_id` in backend config, (3) route live gaze by transport (mouse, overlay, WebGazer), (4) custom device pipeline hooks.
 
+## 2026-08-23 — Cognitive hub mouse + math modules
+- What was decided: Games hub uses normal mouse (no hide-OS-cursor / no dwell cursor). Dwell + eye-tracker cursor only after entering a game. Catalog includes UFYP math modules: `math-true-false` (Benar/Salah) and `math-fill-blank` (2×2 grid), ahead of Face / Visual Search / Memory.
+- Why: Hub is navigation, not an eye-tracked trial; math games were in the reference set but missing from Phase 1 catalog.
+- What was rejected and why: Keeping dwell cursor on the hub was rejected — it fights mouse UX before a session starts.
+- What was decided: Option C fullscreen game shell; mode select adds Cognitive Games; hub supports playlist order (editable) or single-game pick; dwell cursor is settings-selectable (arrow/dot/ring/pie + color); CSS-only dwell animation; default dwell 1000ms (Visual Search 3000ms); gaze source selectable (mouse live in Phase 1; socket/tobii/webgazer stubs); operator hotkeys Q/S from day one.
+- Why: Matches UFYP math-game shell pattern and reference images in `new-game/`, keeps editor chrome isolated, and lets experimenters configure cursor without shipping full modules yet.
+- What was rejected and why: Pinia-heavy Option A and composable-only Option B deferred; embedding games inside editor chrome rejected for visual isolation.
+
 ## 2026-08-23 — Settings page “CSS gone” restyle
 - What was decided: Restyle `SettingsView` / `SettingsTestCard` with scoped dark theme tokens and dedicated `settings-field` / `settings-input` (column layout). Keep global `app.css` loaded from `main.ts`.
 - Why: Settings looked broken (huge dark inputs, light bg, poor contrast) because light fallback + global horizontal `.input-group` / `.input-text` fought the dark editor theme—not because CSS failed to load entirely.
 - What was rejected and why: Relying on Bootstrap/legacy form classes or global `.input-group` for settings fields was rejected; those stretch inputs and clash with dark `.btn` / panel colors.
+
+## 2026-08-23 — Cognitive hub mouse + math modules
+- What was decided: Games hub uses normal mouse (no hide-OS-cursor / no dwell cursor). Dwell + eye-tracker cursor only after entering a game. Catalog includes UFYP math modules: `math-true-false` (Benar/Salah) and `math-fill-blank` (2x2 grid), ahead of Face / Visual Search / Memory.
+- Why: Hub is navigation, not an eye-tracked trial; math games were in the reference set but missing from Phase 1 catalog.
+- What was rejected and why: Keeping dwell cursor on the hub was rejected — it fights mouse UX before a session starts.
+
+## 2026-08-23 — Games hub in editor shell + playlist editor
+- What was decided: Cognitive Games uses Shell B (AppHeader + status bar like Live/Import). Hub playlist uses 2C: checkboxes (enabled set), drag handle, and up/down buttons. Play in order only runs enabled games.
+- Why: User chose editor chrome continuity and full reorder UX.
+- What was rejected and why: Standalone black fullscreen hub (Shell A/C) rejected for this iteration.
+
+## 2026-08-23 — Cursor shape vs dwell effect
+- What was decided: Cursor shapes are arrow / dot / transparent. Ring and pie are dwell-effect styles (progress while dwelling), stored as `dwellEffect`. Legacy saved `shape: ring|pie` migrates to `shape: dot` + matching dwellEffect.
+- Why: User clarified ring/pie are dwell feedback, not pointer glyphs; requested transparent cursor.
+- What was rejected and why: Keeping ring/pie in the shape grid was rejected.
+
+## 2026-08-23 — Settings playlist order removed
+- What was decided: Drop Playlist order from CognitiveSettingsOverlay; hub cards own reorder (drag + ↑↓).
+- Why: Duplicate of hub controls.
+- What was rejected and why: Keeping a second playlist editor in settings was rejected as redundant.
+
+## 2026-08-23 — Cognitive gaze source uses global device
+- What was decided: Remove Gaze source from CognitiveSettingsOverlay. In-game gaze follows `useGazeDevices` selected device (Settings → Gaze device).
+- Why: Gaze hardware/source is app-global, not a game-cursor tweak.
+- What was rejected and why: Duplicate gaze picker in game settings was rejected.
+
+## 2026-08-23 — Split cursor vs dwell effect colors
+- What was decided: `cursorColor` and `dwellEffectColor` are separate settings. Legacy single `color` migrates to both.
+- Why: User asked to split the combined color control.
+- What was rejected and why: One shared color for glyph + dwell effect was rejected.
+
+## 2026-08-23 — Per-game dwell (approach C)
+- What was decided: Hybrid C — dwell editable on each hub card; gear opens per-game settings panel. Day one panel fields: dwell only. Persist `sorot.cognitiveGameSettings`. Remove global default dwell from cursor settings overlay. Catalog `dwellMsOverride` seeds defaults (Visual Search 3000, others 1000).
+- Why: User chose C; each module needs its own dwell; “another settings” deferred beyond dwell for day one.
+- What was rejected and why: Global-only dwell and settings-only reorder of dwell were rejected.
+
+## 2026-08-23 — Transparent dwell effect
+- What was decided: Dwell effect options are transparent / ring / pie. Transparent hides dwell progress UI (dwell click still works).
+- Why: User requested transparent dwell effect alongside ring/pie.
+- What was rejected and why: Keeping only visible ring/pie feedback was rejected.
+
+## 2026-08-23 — Hub drag reorder polish
+- What was decided: Live index reorder while dragging (`moveGameToIndex`), lifted drag ghost, dashed placeholder card, accent drop-line before/after, smoother TransitionGroup FLIP easing.
+- Why: User asked for more professional/intuitive drag-and-drop card motion on the hub.
+- What was rejected and why: Drop-only reorder without live preview was rejected as less intuitive.
+
+## 2026-08-23 — Animated cursor settings preview
+- What was decided: CognitiveSettingsOverlay shows a live looping dwell preview (reuses DwellCursor `embedded` mode) for current shape + effect + colors.
+- Why: User requested an animated cursor preview in Game settings.
+- What was rejected and why: Static icon-only previews alone were rejected as insufficient.

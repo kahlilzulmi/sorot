@@ -21,6 +21,7 @@
 		</div>
 
 		<div class="header-right">
+			<template v-if="appMode !== 'games'">
 			<button
 				class="btn btn-primary btn-sm"
 				type="button"
@@ -128,6 +129,7 @@
 			>
 				<Monitor class="header-icon" /> {{ dualVideoMode === 'dual' ? 'Single Video' : 'Dual Video' }}
 			</button>
+			</template>
 			<a
 				href="/settings"
 				class="btn btn-secondary btn-sm"

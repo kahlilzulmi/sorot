@@ -1983,8 +1983,8 @@ body {
 
 .mode-cards {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 30px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
 }
 
 .mode-health-strip {

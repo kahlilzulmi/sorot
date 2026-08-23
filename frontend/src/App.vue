@@ -39,6 +39,12 @@
 			@open-settings="openSettings"
 		/>
 
+		<CognitiveGameShell
+			v-if="workspace.state.appMode === 'games'"
+			@exit="workspace.backToModeSelect"
+		/>
+
+		<template v-else>
 		<div class="container">
 			<SceneSidebar
 				:scenes="workspace.state.scenes"
@@ -101,6 +107,7 @@
 				@delete-roi="onDeleteRoi"
 			/>
 		</div>
+		</template>
 
 		<StatusBar
 			:status-message="workspace.state.statusMessage"
@@ -220,6 +227,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue'
 import ModeSelector from './components/mode/ModeSelector.vue'
+import CognitiveGameShell from './components/cognitive/CognitiveGameShell.vue'
 import AppHeader from './components/layouts/AppHeader.vue'
 import SceneSidebar from './components/scene/SceneSidebar.vue'
 import VideoWorkspace from './components/video/VideoWorkspace.vue'

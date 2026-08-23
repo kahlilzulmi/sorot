@@ -3,7 +3,7 @@ import type { VideoInfo, WorkspaceScene } from '../types/workspace'
 
 export type { VideoInfo, WorkspaceScene } from '../types/workspace'
 
-export type AppMode = 'select' | 'live' | 'import'
+export type AppMode = 'select' | 'live' | 'import' | 'games'
 
 type SelectableMode = Exclude<AppMode, 'select'>
 const NAV_STORAGE_KEY = 'sorot:last-navigation'
@@ -39,7 +39,7 @@ export interface WorkspaceStateApi {
 }
 
 function normalizeMode(mode: string | null | undefined): AppMode {
-	if (mode === 'live' || mode === 'import' || mode === 'select') return mode
+	if (mode === 'live' || mode === 'import' || mode === 'select' || mode === 'games') return mode
 	return 'select'
 }
 
@@ -125,6 +125,7 @@ export function useWorkspaceState(): WorkspaceStateApi {
 	const modeTitle = computed(() => {
 		if (state.appMode === 'live') return 'Live Recording Mode'
 		if (state.appMode === 'import') return 'Import and Analyze Mode'
+		if (state.appMode === 'games') return 'Cognitive Games'
 		return 'Choose your workflow'
 	})
 
