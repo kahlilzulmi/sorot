@@ -25,6 +25,8 @@
 						:dwell-effect-color="cursor.dwellEffectColor"
 						:shape="cursor.shape"
 						:dwell-effect="cursor.dwellEffect"
+						:cursor-size-px="cursor.cursorSizePx"
+						:dwell-effect-size-px="cursor.dwellEffectSizePx"
 						:progress="previewProgress"
 						:dwelling="previewDwelling"
 					/>
@@ -35,7 +37,7 @@
 						Invisible pointer + dwell
 					</p>
 				</div>
-				<p class="cog-hint">Animated sample dwell — updates as you change shape, effect, and colors.</p>
+				<p class="cog-hint">Animated sample dwell — updates as you change shape, effect, colors, and sizes.</p>
 			</section>
 
 			<section class="cog-section">
@@ -102,8 +104,35 @@
 					</div>
 				</div>
 				<p v-if="cursor.shape === 'transparent'" class="cog-hint">
-					Pointer glyph is hidden — cursor color does not apply.
+					Pointer glyph is hidden — cursor color and size do not apply.
 				</p>
+				<div class="cog-field">
+					<span>Cursor size</span>
+					<div class="cog-size-row">
+						<input
+							type="range"
+							class="cog-size-slider"
+							:min="CURSOR_SIZE_MIN"
+							:max="CURSOR_SIZE_MAX"
+							:value="cursor.cursorSizePx"
+							:disabled="cursor.shape === 'transparent'"
+							aria-label="Cursor size"
+							@input="onCursorSizeSlider"
+						>
+						<input
+							v-model.number="cursorSizeDraft"
+							type="number"
+							class="cog-size-input"
+							:min="CURSOR_SIZE_MIN"
+							:max="CURSOR_SIZE_MAX"
+							:disabled="cursor.shape === 'transparent'"
+							aria-label="Cursor size pixels"
+							@change="commitCursorSize"
+							@keydown.enter.prevent="commitCursorSize"
+						>
+						<span class="cog-size-unit">px</span>
+					</div>
+				</div>
 			</section>
 
 			<section class="cog-section">
@@ -173,6 +202,33 @@
 					No dwell progress UI — effect color does not apply.
 				</p>
 				<p v-else class="cog-hint">Shown while gaze dwells on a target — separate from the pointer glyph.</p>
+				<div class="cog-field">
+					<span>Dwell effect size</span>
+					<div class="cog-size-row">
+						<input
+							type="range"
+							class="cog-size-slider"
+							:min="CURSOR_SIZE_MIN"
+							:max="CURSOR_SIZE_MAX"
+							:value="cursor.dwellEffectSizePx"
+							:disabled="cursor.dwellEffect === 'transparent'"
+							aria-label="Dwell effect size"
+							@input="onDwellEffectSizeSlider"
+						>
+						<input
+							v-model.number="dwellEffectSizeDraft"
+							type="number"
+							class="cog-size-input"
+							:min="CURSOR_SIZE_MIN"
+							:max="CURSOR_SIZE_MAX"
+							:disabled="cursor.dwellEffect === 'transparent'"
+							aria-label="Dwell effect size pixels"
+							@change="commitDwellEffectSize"
+							@keydown.enter.prevent="commitDwellEffectSize"
+						>
+						<span class="cog-size-unit">px</span>
+					</div>
+				</div>
 			</section>
 
 			<footer class="cog-panel__footer">
@@ -199,7 +255,9 @@ const {
 	setCursorShape,
 	setDwellEffect,
 	setCursorColor,
-	setDwellEffectColor
+	setDwellEffectColor,
+	setCursorSizePx,
+	setDwellEffectSizePx
 } = useCognitiveSettings()
 
 type ColorPopoverId = 'cursor' | 'dwell'
@@ -248,6 +306,28 @@ function tickPreview(now: number): void {
 
 function closeColorPopovers(): void {
 	openColorPopover.value = null
+}
+
+function onCursorSizeSlider(event: Event): void {
+	const value = Number((event.target as HTMLInputElement).value)
+	setCursorSizePx(value)
+	cursorSizeDraft.value = cursor.cursorSizePx
+}
+
+function commitCursorSize(): void {
+	setCursorSizePx(Number(cursorSizeDraft.value))
+	cursorSizeDraft.value = cursor.cursorSizePx
+}
+
+function onDwellEffectSizeSlider(event: Event): void {
+	const value = Number((event.target as HTMLInputElement).value)
+	setDwellEffectSizePx(value)
+	dwellEffectSizeDraft.value = cursor.dwellEffectSizePx
+}
+
+function commitDwellEffectSize(): void {
+	setDwellEffectSizePx(Number(dwellEffectSizeDraft.value))
+	dwellEffectSizeDraft.value = cursor.dwellEffectSizePx
 }
 
 function toggleColorPopover(id: ColorPopoverId): void {
@@ -409,7 +489,7 @@ onUnmounted(() => {
 
 .cog-preview-stage {
 	position: relative;
-	height: 132px;
+	height: 180px;
 	overflow: hidden;
 	border: 1px solid #444;
 	border-radius: 8px;
@@ -516,6 +596,38 @@ onUnmounted(() => {
 
 .cog-field--inline {
 	margin-top: 10px;
+}
+
+.cog-size-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.cog-size-slider {
+	flex: 1;
+	min-width: 0;
+	accent-color: #fff;
+}
+
+.cog-size-input {
+	width: 64px;
+	padding: 6px 8px;
+	border: 1px solid #666;
+	border-radius: 4px;
+	background: #111;
+	color: #fff;
+	font-size: 13px;
+}
+
+.cog-size-input:disabled,
+.cog-size-slider:disabled {
+	opacity: 0.45;
+}
+
+.cog-size-unit {
+	color: #888;
+	font-size: 12px;
 }
 
 .cog-color-field {

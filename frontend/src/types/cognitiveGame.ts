@@ -31,6 +31,10 @@ export interface CognitiveCursorSettings {
 	cursorColor: string
 	/** Dwell progress indicator color (ring / pie). */
 	dwellEffectColor: string
+	/** Pointer glyph size in CSS pixels (arrow / dot). */
+	cursorSizePx: number
+	/** Dwell progress indicator size in CSS pixels (ring / pie). */
+	dwellEffectSizePx: number
 	dwellMs: number
 	gazeSource: GazeInputSourceId
 }
@@ -81,11 +85,21 @@ export const COGNITIVE_GAMES: CognitiveGameDefinition[] = [
 	}
 ]
 
+export const CURSOR_SIZE_MIN = 16
+export const CURSOR_SIZE_MAX = 96
+
+export function clampCursorSizePx(value: number): number {
+	if (!Number.isFinite(value)) return 36
+	return Math.max(CURSOR_SIZE_MIN, Math.min(CURSOR_SIZE_MAX, Math.round(value)))
+}
+
 export const DEFAULT_COGNITIVE_CURSOR: CognitiveCursorSettings = {
 	shape: 'dot',
 	dwellEffect: 'ring',
 	cursorColor: '#FFFFFF',
 	dwellEffectColor: '#FFFFFF',
+	cursorSizePx: 36,
+	dwellEffectSizePx: 36,
 	dwellMs: 1000,
 	gazeSource: 'mouse'
 }
@@ -184,6 +198,12 @@ export function normalizeCursorSettings(
 		dwellEffect,
 		cursorColor,
 		dwellEffectColor,
+		cursorSizePx: clampCursorSizePx(
+			Number(parsed.cursorSizePx) || DEFAULT_COGNITIVE_CURSOR.cursorSizePx
+		),
+		dwellEffectSizePx: clampCursorSizePx(
+			Number(parsed.dwellEffectSizePx) || DEFAULT_COGNITIVE_CURSOR.dwellEffectSizePx
+		),
 		dwellMs: Math.max(200, Number(parsed.dwellMs) || DEFAULT_COGNITIVE_CURSOR.dwellMs)
 	}
 }

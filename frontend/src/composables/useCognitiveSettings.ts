@@ -7,6 +7,7 @@ import {
 	DEFAULT_COGNITIVE_CURSOR,
 	DEFAULT_COGNITIVE_PLAYLIST,
 	normalizeCursorSettings,
+	clampCursorSizePx,
 	normalizeGameSettings,
 	type CognitiveCursorSettings,
 	type CognitiveGameId,
@@ -162,6 +163,14 @@ export function useCognitiveSettings() {
 		cursor.dwellEffectColor = color
 	}
 
+	function setCursorSizePx(sizePx: number): void {
+		cursor.cursorSizePx = clampCursorSizePx(sizePx)
+	}
+
+	function setDwellEffectSizePx(sizePx: number): void {
+		cursor.dwellEffectSizePx = clampCursorSizePx(sizePx)
+	}
+
 	function setDwellMs(ms: number): void {
 		cursor.dwellMs = Math.max(200, Math.round(ms))
 	}
@@ -277,6 +286,8 @@ export function useCognitiveSettings() {
 		setDwellEffect,
 		setCursorColor,
 		setDwellEffectColor,
+		setCursorSizePx,
+		setDwellEffectSizePx,
 		setDwellMs,
 		setGazeSource,
 		dwellMsForGame,

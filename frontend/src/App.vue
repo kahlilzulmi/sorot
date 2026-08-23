@@ -11,8 +11,9 @@
 		@select-mode="onSelectMode"
 	/>
 
-	<div v-else class="app-shell">
+	<div v-else class="app-shell" :class="{ 'app-shell--cognitive-fullscreen': cognitiveInGame }">
 		<AppHeader
+			v-if="!cognitiveInGame"
 			:app-mode="workspace.state.appMode"
 			:mode-title="modeTitle"
 			:has-video="!!workspace.state.videoInfo"
@@ -41,7 +42,8 @@
 
 		<CognitiveGameShell
 			v-if="workspace.state.appMode === 'games'"
-			@exit="workspace.backToModeSelect"
+			@exit="onCognitiveExit"
+			@in-game-change="cognitiveInGame = $event"
 		/>
 
 		<template v-else>
@@ -110,6 +112,7 @@
 		</template>
 
 		<StatusBar
+			v-if="!cognitiveInGame"
 			:status-message="workspace.state.statusMessage"
 			:current-workspace-file="workspace.state.currentWorkspaceFile"
 			:last-updated="workspace.state.lastUpdated"
@@ -259,6 +262,7 @@ import { useGazePersistence } from './composables/useGazePersistence'
 
 const workspace = useWorkspaceState()
 const { modeTitle } = workspace
+const cognitiveInGame = ref(false)
 const workspaceFileInputRef = ref<HTMLInputElement | null>(null)
 const newVideoModalRef = ref<InstanceType<typeof NewVideoModal> | null>(null)
 const appView = ref<'editor' | 'settings'>(readInitialAppView())
@@ -661,6 +665,9 @@ function onPopState(): void {
 watch(
 	() => workspace.state.appMode,
 	(mode) => {
+		if (mode !== 'games') {
+			cognitiveInGame.value = false
+		}
 		if (mode === 'select') {
 			importMode.resetImportState()
 			gazeSession.clearImportedGaze()
@@ -668,6 +675,11 @@ watch(
 		}
 	}
 )
+
+function onCognitiveExit(): void {
+	cognitiveInGame.value = false
+	workspace.backToModeSelect()
+}
 </script>
 
 <style scoped>
@@ -675,6 +687,11 @@ watch(
 	display: flex;
 	flex-direction: column;
 	min-height: 100vh;
+}
+
+.app-shell--cognitive-fullscreen {
+	height: 100vh;
+	overflow: hidden;
 }
 
 .hidden {

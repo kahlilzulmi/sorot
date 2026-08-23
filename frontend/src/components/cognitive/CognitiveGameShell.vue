@@ -2,15 +2,34 @@
 	<div
 		ref="shellRef"
 		class="cog-shell"
-		:class="{ 'cog-shell--hide-os-cursor': inGame }"
+		:class="{
+			'cog-shell--hide-os-cursor': hideOsCursor,
+			'cog-shell--fullscreen': inGame
+		}"
 	>
 		<div class="cog-shell__stage">
-			<div class="center-panel cog-shell__panel">
+			<div class="cog-shell__panel" :class="{ 'center-panel': !inGame }">
 				<CognitiveGamesHub
 					v-if="view === 'hub'"
 					@play-order="startPlaylist"
 					@play-game="startSingle"
 					@open-settings="toggleSettings"
+				/>
+
+				<MathTrueFalseGame
+					v-else-if="activeGameId === 'math-true-false'"
+					ref="mathTfRef"
+					:playlist-mode="playlistMode"
+					@back="returnToHub"
+					@next-game="advancePlaylist"
+				/>
+
+				<MathFillBlankGame
+					v-else-if="activeGameId === 'math-fill-blank'"
+					ref="mathFbRef"
+					:playlist-mode="playlistMode"
+					@back="returnToHub"
+					@next-game="advancePlaylist"
 				/>
 
 				<div v-else class="cog-placeholder">
@@ -19,7 +38,7 @@
 					</button>
 					<h2>{{ activeGameName }}</h2>
 					<p>
-						Module UI arrives in later phases. Eye-tracker dwell cursor is active in-game only.
+						Module UI arrives in a later phase. Eye-tracker dwell cursor is active in-game only.
 					</p>
 					<button
 						v-if="playlistMode"
@@ -34,13 +53,15 @@
 		</div>
 
 		<DwellCursor
-			v-if="inGame && gaze.point.value"
+			v-if="hideOsCursor && gaze.point.value"
 			:x="gaze.point.value.x"
 			:y="gaze.point.value.y"
 			:cursor-color="cursor.cursorColor"
 			:dwell-effect-color="cursor.dwellEffectColor"
 			:shape="cursor.shape"
 			:dwell-effect="cursor.dwellEffect"
+			:cursor-size-px="cursor.cursorSizePx"
+			:dwell-effect-size-px="cursor.dwellEffectSizePx"
 			:progress="dwell.progress.value"
 			:dwelling="dwell.dwelling.value"
 		/>
@@ -55,11 +76,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import DwellCursor from './DwellCursor.vue'
 import CognitiveGamesHub from './CognitiveGamesHub.vue'
 import CognitiveSettingsOverlay from './CognitiveSettingsOverlay.vue'
 import CognitiveQuitModal from './CognitiveQuitModal.vue'
+import MathTrueFalseGame from './MathTrueFalseGame.vue'
+import MathFillBlankGame from './MathFillBlankGame.vue'
 import { useCognitiveSettings } from '../../composables/useCognitiveSettings'
 import { useGazeDevices } from '../../composables/useGazeDevices'
 import { useGazePoint } from '../../composables/useGazePoint'
@@ -75,9 +98,14 @@ import type { GazeDeviceTransport } from '../../types/gazeDevice'
 
 const emit = defineEmits<{
 	(e: 'exit'): void
+	(e: 'in-game-change', inGame: boolean): void
 }>()
 
+type GazeGameRef = { handleGazeTarget: (id: string) => boolean }
+
 const shellRef = ref<HTMLElement | null>(null)
+const mathTfRef = ref<GazeGameRef | null>(null)
+const mathFbRef = ref<GazeGameRef | null>(null)
 const view = ref<'hub' | 'game'>('hub')
 const activeGameId = ref<CognitiveGameId | null>(null)
 const playlistMode = ref(false)
@@ -98,6 +126,9 @@ const {
 } = useCognitiveSettings()
 
 const inGame = computed(() => view.value === 'game')
+const hideOsCursor = computed(
+	() => inGame.value && !settingsOpen.value && !quitConfirmOpen.value
+)
 const { selectedDevice } = useGazeDevices()
 const gazeSource = computed(() => transportToGazeSource(selectedDevice.value.transport))
 const gaze = useGazePoint(gazeSource)
@@ -115,6 +146,14 @@ const dwell = useDwellClick({
 		handleGazeClick(targetId)
 	}
 })
+
+watch(
+	inGame,
+	(value) => {
+		emit('in-game-change', value)
+	},
+	{ immediate: true }
+)
 
 const activeGameName = computed(() => {
 	const game = COGNITIVE_GAMES.find((entry) => entry.id === activeGameId.value)
@@ -163,6 +202,17 @@ function handleGazeClick(targetId: string): void {
 		if (effect === 'ring' || effect === 'pie' || effect === 'transparent') {
 			setDwellEffect(effect)
 		}
+		return
+	}
+	if (targetId === 'math-tf-next-game' || targetId === 'math-fb-next-game') {
+		advancePlaylist()
+		return
+	}
+	if (mathTfRef.value?.handleGazeTarget(targetId)) {
+		return
+	}
+	if (mathFbRef.value?.handleGazeTarget(targetId)) {
+		return
 	}
 }
 
@@ -232,6 +282,7 @@ onMounted(() => {
 
 onUnmounted(() => {
 	window.removeEventListener('keydown', onKeyDown)
+	emit('in-game-change', false)
 })
 </script>
 
@@ -243,6 +294,20 @@ onUnmounted(() => {
 	padding: 10px 12px;
 	background: var(--color-background);
 	color: var(--color-text);
+}
+
+.cog-shell--fullscreen {
+	position: fixed;
+	inset: 0;
+	z-index: 40;
+	display: flex;
+	flex-direction: column;
+	width: 100vw;
+	height: 100vh;
+	min-height: 100vh;
+	padding: 0;
+	overflow: hidden;
+	background: #000;
 }
 
 .cog-shell--hide-os-cursor,
@@ -257,10 +322,48 @@ onUnmounted(() => {
 	height: 100%;
 }
 
+.cog-shell--fullscreen .cog-shell__stage {
+	flex: 1;
+	width: 100%;
+	min-width: 0;
+	max-width: none;
+	height: 100%;
+	margin: 0;
+}
+
 .cog-shell__panel {
 	min-height: calc(100% - 4px);
 	overflow: auto;
 	padding: 16px 18px;
+}
+
+.cog-shell--fullscreen .cog-shell__panel {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 100%;
+	padding: 0;
+	overflow: hidden;
+	background: transparent !important;
+	border: none !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+}
+
+.cog-shell--fullscreen .cog-shell__panel > * {
+	flex: 1 1 auto;
+	min-height: 0;
+	width: 100%;
+	height: 100%;
+}
+
+.cog-shell--fullscreen .cog-placeholder {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	max-width: none;
+	padding: clamp(1.5rem, 4vw, 3rem);
 }
 
 .cog-placeholder {
@@ -280,3 +383,4 @@ onUnmounted(() => {
 	line-height: 1.5;
 }
 </style>
+

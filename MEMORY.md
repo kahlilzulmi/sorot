@@ -113,3 +113,28 @@
 - What was decided: CognitiveSettingsOverlay shows a live looping dwell preview (reuses DwellCursor `embedded` mode) for current shape + effect + colors.
 - Why: User requested an animated cursor preview in Game settings.
 - What was rejected and why: Static icon-only previews alone were rejected as insufficient.
+
+## 2026-08-23 — Math · True / False playable module
+- What was decided: Ship `math-true-false` as first playable module — equation list + Benar/Salah (mouse + dwell targets `math-tf-benar` / `math-tf-salah`), feedback colors, score, summary; `createMathTrueFalseSession` generates true/false equations; shell mounts `MathTrueFalseGame` when `activeGameId === 'math-true-false'`.
+- Why: User chose Phase A (Math TF) next; matches UFYP `new-game/math-game.png` pattern.
+- What was rejected and why: Leaving Math TF as placeholder until Face Familiarity; Fill-blank / Face / VS / Memory still placeholders.
+
+## 2026-08-23 — In-game fullscreen + Math Fill Blank
+- What was decided: Hub stays Shell B (header + status). Entering any game hides AppHeader/StatusBar and expands shell to full viewport (`cog-shell--fullscreen`, black stage). Ship `math-fill-blank` mirrored from Math TF: equation list with `...` blanks, 2×2 dwell grid (`math-fb-choice-0..3`), green/red filled feedback.
+- Why: User chose “fullscreen in-game only” + “mirror math TF” for Fill Blank.
+- What was rejected and why: Fullscreen for hub too (option 2); shared math-shell refactor (option 2) deferred.
+
+## 2026-08-23 — In-game UI fills viewport (not card)
+- What was decided: In-game shell uses `position: fixed; inset: 0` black stage; drop `center-panel` card chrome while playing; math TF/FB boards use large vh/vmin type and answer targets spanning the landscape (list left, controls right) like the single-image UFYP mock — not the compiled multi-panel reference strip.
+- Why: User reported math games looked too small vs the full-screen single mock.
+- What was rejected and why: Keeping max-width card / editor-panel inset layout in-game.
+
+## 2026-08-23 — Restore OS cursor in Game settings
+- What was decided: Hide OS cursor only while actively playing (`inGame && !settingsOpen && !quitConfirmOpen`). Opening Game settings (or quit) restores the normal mouse cursor and hides the dwell cursor so operators can click settings controls.
+- Why: User could not select settings in-game because `cursor: none` covered the overlay.
+- What was rejected and why: Keeping OS cursor hidden during settings and relying only on dwell for settings interaction.
+
+## 2026-08-23 — Split cursor sizes (slider + input, WYSIWYG)
+- What was decided: Separate cursorSizePx and dwellEffectSizePx (16–96px, default 36). Each has a range slider + numeric input in Game settings. DwellCursor scales glyph and ring/pie from those props; live preview and in-game share the same props (WYSIWYG). Persist via existing cognitive settings localStorage + normalize clamp.
+- Why: User chose option 3 (split sizes) with slider + input each.
+- What was rejected and why: Single shared size slider; presets-only S/M/L.
