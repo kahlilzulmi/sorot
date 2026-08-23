@@ -32,6 +32,30 @@
 					@next-game="advancePlaylist"
 				/>
 
+				<FaceFamiliarityGame
+					v-else-if="activeGameId === 'face-familiarity'"
+					ref="faceFamRef"
+					:playlist-mode="playlistMode"
+					@back="returnToHub"
+					@next-game="advancePlaylist"
+				/>
+
+				<VisualSearchGame
+					v-else-if="activeGameId === 'visual-search'"
+					ref="visualSearchRef"
+					:playlist-mode="playlistMode"
+					@back="returnToHub"
+					@next-game="advancePlaylist"
+				/>
+
+				<MemoryMatrixGame
+					v-else-if="activeGameId === 'memory-matrix'"
+					ref="memoryMatrixRef"
+					:playlist-mode="playlistMode"
+					@back="returnToHub"
+					@next-game="advancePlaylist"
+				/>
+
 				<div v-else class="cog-placeholder">
 					<button type="button" class="btn btn-secondary btn-sm" @click="returnToHub">
 						← Games hub
@@ -72,6 +96,11 @@
 			@confirm="confirmQuit"
 			@cancel="closeQuitConfirm"
 		/>
+		<CognitiveFacePhotosModal
+			v-if="facePhotosWarningOpen"
+			@dismiss="closeFacePhotosWarning"
+			@open-settings="openFacePhotosSettings"
+		/>
 	</div>
 </template>
 
@@ -81,8 +110,13 @@ import DwellCursor from './DwellCursor.vue'
 import CognitiveGamesHub from './CognitiveGamesHub.vue'
 import CognitiveSettingsOverlay from './CognitiveSettingsOverlay.vue'
 import CognitiveQuitModal from './CognitiveQuitModal.vue'
+import CognitiveFacePhotosModal from './CognitiveFacePhotosModal.vue'
 import MathTrueFalseGame from './MathTrueFalseGame.vue'
 import MathFillBlankGame from './MathFillBlankGame.vue'
+import FaceFamiliarityGame from './FaceFamiliarityGame.vue'
+import VisualSearchGame from './VisualSearchGame.vue'
+import MemoryMatrixGame from './MemoryMatrixGame.vue'
+import { hasSuppliedFacePhotos } from '../../utils/faceFamiliarityAssets'
 import { useCognitiveSettings } from '../../composables/useCognitiveSettings'
 import { useGazeDevices } from '../../composables/useGazeDevices'
 import { useGazePoint } from '../../composables/useGazePoint'
@@ -106,6 +140,10 @@ type GazeGameRef = { handleGazeTarget: (id: string) => boolean }
 const shellRef = ref<HTMLElement | null>(null)
 const mathTfRef = ref<GazeGameRef | null>(null)
 const mathFbRef = ref<GazeGameRef | null>(null)
+const faceFamRef = ref<GazeGameRef | null>(null)
+const visualSearchRef = ref<GazeGameRef | null>(null)
+const memoryMatrixRef = ref<GazeGameRef | null>(null)
+const facePhotosWarningOpen = ref(false)
 const view = ref<'hub' | 'game'>('hub')
 const activeGameId = ref<CognitiveGameId | null>(null)
 const playlistMode = ref(false)
@@ -120,6 +158,7 @@ const {
 	openQuitConfirm,
 	closeQuitConfirm,
 	closeOverlays,
+	openGameSettings,
 	dwellMsForGame,
 	setCursorShape,
 	setDwellEffect
@@ -204,7 +243,13 @@ function handleGazeClick(targetId: string): void {
 		}
 		return
 	}
-	if (targetId === 'math-tf-next-game' || targetId === 'math-fb-next-game') {
+	if (
+		targetId === 'math-tf-next-game' ||
+		targetId === 'math-fb-next-game' ||
+		targetId === 'face-fam-next-game' ||
+		targetId === 'vs-next-game' ||
+		targetId === 'mm-next-game'
+	) {
 		advancePlaylist()
 		return
 	}
@@ -214,9 +259,39 @@ function handleGazeClick(targetId: string): void {
 	if (mathFbRef.value?.handleGazeTarget(targetId)) {
 		return
 	}
+	if (faceFamRef.value?.handleGazeTarget(targetId)) {
+		return
+	}
+	if (visualSearchRef.value?.handleGazeTarget(targetId)) {
+		return
+	}
+	if (memoryMatrixRef.value?.handleGazeTarget(targetId)) {
+		return
+	}
+}
+
+function showFacePhotosWarning(): void {
+	facePhotosWarningOpen.value = true
+}
+
+function closeFacePhotosWarning(): void {
+	facePhotosWarningOpen.value = false
+}
+
+function openFacePhotosSettings(): void {
+	facePhotosWarningOpen.value = false
+	openGameSettings('face-familiarity')
+}
+
+function ensureFacePhotosReady(id: CognitiveGameId): boolean {
+	if (id !== 'face-familiarity') return true
+	if (hasSuppliedFacePhotos()) return true
+	showFacePhotosWarning()
+	return false
 }
 
 function startSingle(id: CognitiveGameId): void {
+	if (!ensureFacePhotosReady(id)) return
 	playlistMode.value = false
 	activeGameId.value = id
 	view.value = 'game'
@@ -226,6 +301,10 @@ function startSingle(id: CognitiveGameId): void {
 function startPlaylist(): void {
 	const ids = playableIds.value
 	if (ids.length === 0) return
+	if (ids.includes('face-familiarity') && !hasSuppliedFacePhotos()) {
+		showFacePhotosWarning()
+		return
+	}
 	playlistMode.value = true
 	playlistIndex.value = 0
 	activeGameId.value = ids[0] ?? null
@@ -241,14 +320,20 @@ function advancePlaylist(): void {
 		returnToHub()
 		return
 	}
+	const nextId = ids[next] ?? null
+	if (nextId && !ensureFacePhotosReady(nextId)) {
+		returnToHub()
+		return
+	}
 	playlistIndex.value = next
-	activeGameId.value = ids[next] ?? null
+	activeGameId.value = nextId
 }
 
 function returnToHub(): void {
 	view.value = 'hub'
 	activeGameId.value = null
 	playlistMode.value = false
+	facePhotosWarningOpen.value = false
 	closeOverlays()
 }
 

@@ -138,3 +138,33 @@
 - What was decided: Separate cursorSizePx and dwellEffectSizePx (16–96px, default 36). Each has a range slider + numeric input in Game settings. DwellCursor scales glyph and ring/pie from those props; live preview and in-game share the same props (WYSIWYG). Persist via existing cognitive settings localStorage + normalize clamp.
 - Why: User chose option 3 (split sizes) with slider + input each.
 - What was rejected and why: Single shared size slider; presets-only S/M/L.
+
+## 2026-08-23 — Face Familiarity playable module
+- What was decided: Ship `face-familiarity` one-pair-at-a-time (dwell left/right, green/red borders, score/summary/playlist). Face pairs load from localStorage key `sorot.faceFamiliarityAssets` with SVG placeholders by default.
+- Why: User chose approach 1 + provide images via frontend/localStorage.
+- What was rejected and why: Stacked 5-row mockup layout (approach 2); scaffold-only (approach 3).
+
+## 2026-08-23 — Memory Matrix playable module
+- What was decided: Approach 1 — playable 3×3 Memory Matrix with gear settings (start sequence length, rounds, grow-by, flash ms, gap ms). Watch phase flashes yellow; input phase dwell: correct → green, wrong → red (retry round). Wired into shell + gaze (`mm-tile-*`, `mm-next-game`). Catalog id `memory-matrix`.
+- Why: User chose approach 1 after Visual Search.
+- What was rejected and why: Fixed-params-only (2); scaffold-only (3).
+
+## 2026-08-23 — Visual Search playable module
+- What was decided: Approach 2 — playable Visual Search with gear settings (columns, rows, targets/level, session timer). Levels: C→O, O→Q, `|`→I. Default dwell 3000ms from catalog. Found feedback = **letter color turns green only** (no bounding box / pad). Wired into shell + gaze (`vs-cell-*`, `vs-next-game`).
+- Why: User chose approach 2 and clarified feedback is letter color change, not a larger box.
+- What was rejected and why: Scaffold-only (3); oversized green plate/bounding box behind glyph.
+
+## 2026-08-23 — Face Familiarity variable pair count
+- What was decided: Approach 1 — settings **Add pair** / **Remove** (1–40 slots). Session length = number of fully supplied pairs (shuffled, one trial each). Defaults start at 3 placeholder slots. No separate “rounds” control.
+- Why: User wants x pairs defined in settings, not fixed 5.
+- What was rejected and why: Separate rounds slider that reuses pairs (approach 2); fixed slots with rounds-only (approach 3).
+
+## 2026-08-23 — Face Familiarity answer feedback overlays
+- What was decided: On answer, keep green/red borders and add a centered ✓/✕ badge over the image plus a slight darken overlay (`rgba(0,0,0,~0.4)`). Correct side always shows ✓ when locked; chosen wrong side shows ✕.
+- Why: User found border-only feedback weak; chose overlay badge + keep border + darken.
+- What was rejected and why: Corner chip; icon strip above image without overlay.
+
+## 2026-08-23 — Face photos in game settings (not in-game)
+- What was decided: Upload real/AI pairs only in Face Familiarity’s hub gear settings (`CognitiveGameSettingsPanel`). Play (single + playlist including face) is blocked until ≥1 fully supplied pair (`hasSuppliedFacePhotos`). Warning is an in-app modal (`CognitiveFacePhotosModal`), not `window.alert`. Modal offers OK + Open settings (opens that game’s gear panel). In-game has no asset editor; shell no longer tracks `faceAssetEditorOpen`.
+- Why: User asked uploads in that game’s settings, warn when Play without photos; later asked for modal instead of browser prompt.
+- What was rejected and why: In-game **Kelola gambar** / `@asset-editor-change` upload UI; native `window.alert`.
