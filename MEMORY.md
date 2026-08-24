@@ -168,3 +168,8 @@
 - What was decided: Upload real/AI pairs only in Face Familiarity’s hub gear settings (`CognitiveGameSettingsPanel`). Play (single + playlist including face) is blocked until ≥1 fully supplied pair (`hasSuppliedFacePhotos`). Warning is an in-app modal (`CognitiveFacePhotosModal`), not `window.alert`. Modal offers OK + Open settings (opens that game’s gear panel). In-game has no asset editor; shell no longer tracks `faceAssetEditorOpen`.
 - Why: User asked uploads in that game’s settings, warn when Play without photos; later asked for modal instead of browser prompt.
 - What was rejected and why: In-game **Kelola gambar** / `@asset-editor-change` upload UI; native `window.alert`.
+
+## 2026-08-23 — Hosting: Render Docker (Approach 3)
+- What was decided: Host full SOROT stack on **Render** as a Docker Web Service (not Netlify). One container serves Vue + Flask + Socket.IO on port 5000.
+- Why: User chose Approach 3 (single Docker host) and specified Render.
+- What was rejected and why: Netlify frontend-only (Approach 1); Netlify + separate API (Approach 2) — Socket.IO split is fragile.
