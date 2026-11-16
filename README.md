@@ -6,6 +6,10 @@ Started as my Bachelor's thesis at ITS, the computer-vision extraction of x/y ga
 
 The primary interface is a **Vue 3 + Vite + TypeScript** single-page app (`frontend/`) talking to a **Flask + Socket.IO** API (`sorot.py`). Define scenes and ROIs, import or record gaze data, and export metrics for neuromarketing and vision research.
 
+[![A web interface showing ROI Analyzer or now called S.O.R.O.T. (SOROT)](https://github.com/kahlilzulmi/sorot/blob/dev/Screenshot_1.png)](https://youtu.be/gYU284DnV2E?si=Czivn9iUYMuccNYK)
+
+<p align="center"><i>(Click the screenshot to play the video; It still showing the old version of the project, pls try it to get the latest one)</i></p>
+
 ## Branches
 
 | Branch | Purpose |
