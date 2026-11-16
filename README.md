@@ -2,6 +2,8 @@
 
 **S**timulus **O**riented **R**egion-**o**f-interest **T**ool — a web application for academic and laboratory eye-tracking studies on video advertisements and other stimuli.
 
+Started as my Bachelor's thesis at ITS, the computer-vision extraction of x/y gaze points from screen-recorded eye tracking. Extended after graduation with ROI analysis, live capture and reporting, following ideas from Prof. Adhi Dharma Wibawa. 
+
 The primary interface is a **Vue 3 + Vite + TypeScript** single-page app (`frontend/`) talking to a **Flask + Socket.IO** API (`sorot.py`). Define scenes and ROIs, import or record gaze data, and export metrics for neuromarketing and vision research.
 
 ## Branches
