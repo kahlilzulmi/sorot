@@ -4,7 +4,7 @@
 
 Started as my Bachelor’s thesis at ITS, this computer-vision extraction of x/y gaze points from screen-recorded eye-tracking sessions is being extended after graduation with ROI analysis, live capture, and reporting, following ideas from Prof. Adhi Dharma Wibawa.
 
-The primary interface is a **Vue 3 + Vite + TypeScript** single-page app (`frontend/`) talking to a **Flask + Socket.IO** API (`sorot.py`). Define scenes and ROIs, import or record gaze data, and export metrics for neuromarketing and vision research.
+I designed the system, the implementation were AI-assisted, and all the outputs were reviewed by me. The primary interface is a **Vue 3 + Vite + TypeScript** single-page app (`frontend/`) talking to a **Flask + Socket.IO** API (`sorot.py`). Define scenes and ROIs, import or record gaze data, and export metrics for neuromarketing and vision research.
 
 [![A web interface showing ROI Analyzer or now called S.O.R.O.T. (SOROT)](https://github.com/kahlilzulmi/sorot/blob/dev/Screenshot_1.png)](https://youtu.be/gYU284DnV2E?si=Czivn9iUYMuccNYK)
 
