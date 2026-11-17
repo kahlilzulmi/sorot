@@ -1,6 +1,6 @@
 <template>
 	<div class="mm-game">
-		<header class="mm-game__header">
+		<header class="mm-game__header" data-session-chrome>
 			<button type="button" class="btn btn-secondary btn-sm" @click="$emit('back')">
 				← Games hub
 			</button>
@@ -61,13 +61,13 @@
 				>
 					Game berikutnya
 				</button>
-				<button type="button" class="btn btn-secondary" @click="$emit('back')">
+				<button type="button" class="btn btn-secondary" data-session-chrome @click="$emit('back')">
 					Kembali ke hub
 				</button>
 			</div>
 		</div>
 
-		<p class="mm-game__hint">
+		<p class="mm-game__hint" data-session-chrome>
 			Sistem menyorot kotak kuning — ulang urutannya. Benar = hijau, salah = merah. Atur panjang
 			pola & timing di pengaturan modul.
 		</p>

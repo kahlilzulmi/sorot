@@ -4,7 +4,8 @@
 		class="cog-shell"
 		:class="{
 			'cog-shell--hide-os-cursor': hideOsCursor,
-			'cog-shell--fullscreen': inGame
+			'cog-shell--fullscreen': inGame,
+			'cog-shell--focus': inGame && cursor.playView === 'focus'
 		}"
 	>
 		<div class="cog-shell__stage">
@@ -57,7 +58,7 @@
 				/>
 
 				<div v-else class="cog-placeholder">
-					<button type="button" class="btn btn-secondary btn-sm" @click="returnToHub">
+					<button type="button" class="btn btn-secondary btn-sm" data-session-chrome @click="returnToHub">
 						← Games hub
 					</button>
 					<h2>{{ activeGameName }}</h2>
@@ -89,6 +90,12 @@
 			:progress="dwell.progress.value"
 			:dwelling="dwell.dwelling.value"
 		/>
+		<GazeDebugHud
+			v-if="inGame && cursor.playView === 'debug'"
+			:processed="gaze.point.value"
+			:raw="gaze.rawPoint.value"
+			:frame="gaze.frameSample.value"
+		/>
 
 		<CognitiveSettingsOverlay v-if="settingsOpen" @close="closeOverlays" />
 		<CognitiveQuitModal
@@ -105,8 +112,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import DwellCursor from './DwellCursor.vue'
+import GazeDebugHud from './GazeDebugHud.vue'
 import CognitiveGamesHub from './CognitiveGamesHub.vue'
 import CognitiveSettingsOverlay from './CognitiveSettingsOverlay.vue'
 import CognitiveQuitModal from './CognitiveQuitModal.vue'
@@ -161,16 +169,21 @@ const {
 	openGameSettings,
 	dwellMsForGame,
 	setCursorShape,
-	setDwellEffect
+	setDwellEffect,
+	setPlayView
 } = useCognitiveSettings()
 
 const inGame = computed(() => view.value === 'game')
-const hideOsCursor = computed(
-	() => inGame.value && !settingsOpen.value && !quitConfirmOpen.value
-)
 const { selectedDevice } = useGazeDevices()
 const gazeSource = computed(() => transportToGazeSource(selectedDevice.value.transport))
 const gaze = useGazePoint(gazeSource)
+const hideOsCursor = computed(
+	() =>
+		inGame.value &&
+		!settingsOpen.value &&
+		!quitConfirmOpen.value &&
+		gaze.active.value
+)
 const dwellMs = computed(() => dwellMsForGame(activeGameId.value))
 const dwellPaused = computed(
 	() => !inGame.value || settingsOpen.value || quitConfirmOpen.value
@@ -290,12 +303,29 @@ function ensureFacePhotosReady(id: CognitiveGameId): boolean {
 	return false
 }
 
+async function enterPlayFullscreen(): Promise<void> {
+	await nextTick()
+	const el = shellRef.value
+	if (!el || document.fullscreenElement) return
+	try {
+		await el.requestFullscreen()
+	} catch {
+		// CSS .cog-shell--fullscreen still covers the viewport.
+	}
+}
+
+function exitPlayFullscreen(): void {
+	if (!document.fullscreenElement) return
+	void document.exitFullscreen().catch(() => undefined)
+}
+
 function startSingle(id: CognitiveGameId): void {
 	if (!ensureFacePhotosReady(id)) return
 	playlistMode.value = false
 	activeGameId.value = id
 	view.value = 'game'
 	closeOverlays()
+	void enterPlayFullscreen()
 }
 
 function startPlaylist(): void {
@@ -310,6 +340,7 @@ function startPlaylist(): void {
 	activeGameId.value = ids[0] ?? null
 	view.value = 'game'
 	closeOverlays()
+	void enterPlayFullscreen()
 }
 
 function advancePlaylist(): void {
@@ -335,10 +366,12 @@ function returnToHub(): void {
 	playlistMode.value = false
 	facePhotosWarningOpen.value = false
 	closeOverlays()
+	exitPlayFullscreen()
 }
 
 function confirmQuit(): void {
 	closeOverlays()
+	exitPlayFullscreen()
 	emit('exit')
 }
 
@@ -358,6 +391,11 @@ function onKeyDown(event: KeyboardEvent): void {
 	if (event.key === 's' || event.key === 'S') {
 		event.preventDefault()
 		toggleSettings()
+		return
+	}
+	if (event.key === 'd' || event.key === 'D') {
+		event.preventDefault()
+		setPlayView(cursor.playView === 'focus' ? 'debug' : 'focus')
 	}
 }
 
@@ -367,6 +405,7 @@ onMounted(() => {
 
 onUnmounted(() => {
 	window.removeEventListener('keydown', onKeyDown)
+	exitPlayFullscreen()
 	emit('in-game-change', false)
 })
 </script>
@@ -398,6 +437,10 @@ onUnmounted(() => {
 .cog-shell--hide-os-cursor,
 .cog-shell--hide-os-cursor * {
 	cursor: none !important;
+}
+
+.cog-shell--focus :deep([data-session-chrome]) {
+	display: none !important;
 }
 
 .cog-shell__stage {

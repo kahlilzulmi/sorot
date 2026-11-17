@@ -13,6 +13,32 @@
 			</header>
 
 			<section class="cog-section">
+				<h3>Play view</h3>
+				<div class="cog-shape-grid">
+					<button
+						type="button"
+						class="cog-shape-btn"
+						:class="{ active: cursor.playView === 'focus' }"
+						@click="setPlayView('focus')"
+					>
+						Focus
+					</button>
+					<button
+						type="button"
+						class="cog-shape-btn"
+						:class="{ active: cursor.playView === 'debug' }"
+						@click="setPlayView('debug')"
+					>
+						Debug
+					</button>
+				</div>
+				<p class="cog-hint">
+					Focus hides hub buttons and hints. Debug keeps chrome and shows raw vs processed gaze.
+					Play always enters browser fullscreen. <kbd>d</kbd> toggles this in-game.
+				</p>
+			</section>
+
+			<section class="cog-section">
 				<h3>Live preview</h3>
 				<div class="cog-preview-stage" aria-hidden="true">
 					<div class="cog-preview-stage__grid" />
@@ -257,7 +283,8 @@ const {
 	setCursorColor,
 	setDwellEffectColor,
 	setCursorSizePx,
-	setDwellEffectSizePx
+	setDwellEffectSizePx,
+	setPlayView
 } = useCognitiveSettings()
 
 type ColorPopoverId = 'cursor' | 'dwell'

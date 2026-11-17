@@ -10,6 +10,15 @@
 			</div>
 		</header>
 
+		<GazeLiveCheck
+			:settings="settings"
+			:capture-devices="captureDevices"
+			:loading-capture-devices="loadingCaptureDevices"
+			@camera-change="onVirtualCameraChange"
+			@refresh-cameras="loadCaptureDevices"
+			@hough-change="applyHoughSettings"
+		/>
+
 		<GazeDeviceSelector />
 
 		<section class="settings-card">
@@ -76,31 +85,6 @@
 						<input v-model="settings.obs_password" class="settings-input" type="password" placeholder="Leave blank to keep current">
 					</label>
 				</div>
-				<div>
-					<h3>Detection</h3>
-					<label class="settings-field">
-						<span>Virtual camera index</span>
-						<input v-model.number="settings.virtual_camera_index" class="settings-input" type="number">
-					</label>
-					<label class="settings-field">
-						<span>Hough param1</span>
-						<input v-model.number="settings.hough_param1" class="settings-input" type="number">
-					</label>
-					<label class="settings-field">
-						<span>Hough param2</span>
-						<input v-model.number="settings.hough_param2" class="settings-input" type="number">
-					</label>
-					<div class="settings-inline-inputs">
-						<label class="settings-field">
-							<span>Min radius</span>
-							<input v-model.number="settings.min_radius" class="settings-input" type="number">
-						</label>
-						<label class="settings-field">
-							<span>Max radius</span>
-							<input v-model.number="settings.max_radius" class="settings-input" type="number">
-						</label>
-					</div>
-				</div>
 			</div>
 
 			<h3>Folder Paths</h3>
@@ -140,6 +124,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import GazeDeviceSelector from './GazeDeviceSelector.vue'
+import GazeLiveCheck from './GazeLiveCheck.vue'
 import SettingsTestCard from './SettingsTestCard.vue'
 import { useSettings } from '../../composables/useSettings'
 
@@ -161,7 +146,12 @@ const {
 	selectedFilePath,
 	savingConfig,
 	runningAllTests,
+	captureDevices,
+	loadingCaptureDevices,
 	loadConfig,
+	loadCaptureDevices,
+	onVirtualCameraChange,
+	applyHoughSettings,
 	saveConfig,
 	testObs,
 	testVirtualCamera,
@@ -174,6 +164,7 @@ const {
 
 onMounted(() => {
 	void loadConfig()
+	void loadCaptureDevices()
 })
 </script>
 
@@ -280,6 +271,10 @@ onMounted(() => {
 	flex-wrap: wrap;
 	gap: 10px;
 	margin: 16px 0 0;
+}
+
+.settings-actions--compact {
+	margin: 0 0 12px;
 }
 
 .settings-help {

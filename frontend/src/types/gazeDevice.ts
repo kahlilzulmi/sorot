@@ -159,7 +159,7 @@ export const BUILTIN_GAZE_DEVICES: GazeDeviceDefinition[] = [
 		manufacturer: 'WebGazer.js',
 		category: 'webcam',
 		transport: 'webgazer',
-		description: 'Standard webcam with browser-based WebGazer estimation (integration planned).',
+		description: 'Standard webcam with browser-based WebGazer.js gaze estimation (client-side).',
 		builtin: true
 	},
 	{

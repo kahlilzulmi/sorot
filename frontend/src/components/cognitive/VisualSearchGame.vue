@@ -1,6 +1,6 @@
 <template>
 	<div class="vs-game">
-		<header class="vs-game__header">
+		<header class="vs-game__header" data-session-chrome>
 			<button type="button" class="btn btn-secondary btn-sm" @click="$emit('back')">
 				← Games hub
 			</button>
@@ -61,13 +61,13 @@
 				>
 					Game berikutnya
 				</button>
-				<button type="button" class="btn btn-secondary" @click="$emit('back')">
+				<button type="button" class="btn btn-secondary" data-session-chrome @click="$emit('back')">
 					Kembali ke hub
 				</button>
 			</div>
 		</div>
 
-		<p class="vs-game__hint">
+		<p class="vs-game__hint" data-session-chrome>
 			Temukan huruf berbeda di kerumunan — dwell (default 3s) pada huruf target sampai berwarna
 			hijau. Atur kepadatan grid & jumlah target di pengaturan modul.
 		</p>

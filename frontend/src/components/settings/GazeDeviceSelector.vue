@@ -49,6 +49,43 @@
 				</button>
 			</div>
 			<p class="device-detail-desc">{{ selectedDevice.description }}</p>
+			<div v-if="selectedDevice.transport === 'webgazer'" class="device-camera-picker">
+				<label class="settings-field">
+					<span>Browser camera (WebGazer)</span>
+					<select
+						class="settings-input"
+						:value="preferredCameraId ?? ''"
+						:disabled="listingCameras"
+						@change="onWebGazerCameraChange"
+					>
+						<option value="">Default (browser choice)</option>
+						<option
+							v-if="preferredCameraId && !browserCameras.some((camera) => camera.deviceId === preferredCameraId)"
+							:value="preferredCameraId"
+						>
+							Saved camera (not in list — refresh)
+						</option>
+						<option
+							v-for="camera in browserCameras"
+							:key="camera.deviceId"
+							:value="camera.deviceId"
+						>
+							{{ camera.label }}
+						</option>
+					</select>
+				</label>
+				<button
+					class="btn btn-secondary btn-sm"
+					type="button"
+					:disabled="listingCameras"
+					@click="listBrowserCameras()"
+				>
+					{{ listingCameras ? 'Listing cameras...' : 'Refresh cameras' }}
+				</button>
+				<p class="settings-help">
+					Separate from overlay/OpenCV cameras. Allow webcam permission to see device names.
+				</p>
+			</div>
 			<div
 				v-if="deviceTest.tone !== 'idle'"
 				class="settings-banner"
@@ -95,8 +132,10 @@
 </template>
 
 <script setup lang="ts">
+import { watch } from 'vue'
 import { categoryLabel, type GazeDeviceCategory } from '../../types/gazeDevice'
 import { useGazeDevices } from '../../composables/useGazeDevices'
+import { useWebGazer } from '../../composables/useWebGazer'
 
 const filters: { id: 'all' | GazeDeviceCategory; label: string }[] = [
 	{ id: 'all', label: 'All' },
@@ -120,6 +159,31 @@ const {
 	removeCustomDevice,
 	testSelectedDevice
 } = useGazeDevices()
+
+const {
+	preferredCameraId,
+	browserCameras,
+	listingCameras,
+	listBrowserCameras,
+	setPreferredCameraId
+} = useWebGazer()
+
+watch(
+	() => selectedDevice.value?.transport,
+	(transport) => {
+		if (transport === 'webgazer') {
+			void listBrowserCameras()
+		}
+	},
+	{ immediate: true }
+)
+
+function onWebGazerCameraChange(event: Event): void {
+	const target = event.target
+	if (!(target instanceof HTMLSelectElement)) return
+	const deviceId = target.value.trim()
+	void setPreferredCameraId(deviceId.length > 0 ? deviceId : null)
+}
 </script>
 
 <style scoped>
@@ -218,6 +282,12 @@ const {
 	font-size: 13px;
 	color: var(--color-text-dim);
 	line-height: 1.5;
+}
+
+.device-camera-picker {
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px solid var(--color-border);
 }
 
 .custom-device-panel {

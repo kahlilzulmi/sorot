@@ -24,6 +24,11 @@ export interface SettingsVideoFile {
 	modified?: string
 }
 
+export interface CaptureDeviceInfo {
+	index: number
+	name: string
+}
+
 export type TestResultTone = 'idle' | 'loading' | 'success' | 'error' | 'warning'
 
 export interface TestResultState {
@@ -66,6 +71,8 @@ export function useSettings() {
 	const selectedFilePath = ref<string | null>(null)
 	const savingConfig = ref(false)
 	const runningAllTests = ref(false)
+	const captureDevices = ref<CaptureDeviceInfo[]>([])
+	const loadingCaptureDevices = ref(false)
 
 	async function loadConfig(): Promise<void> {
 		try {
@@ -81,6 +88,80 @@ export function useSettings() {
 		} catch {
 			configMessage.value = { tone: 'error', message: 'Failed to load settings from server.' }
 		}
+	}
+
+	async function loadCaptureDevices(): Promise<void> {
+		loadingCaptureDevices.value = true
+		try {
+			const response = await apiGet<{
+				success?: boolean
+				devices?: CaptureDeviceInfo[]
+				selected_index?: number
+				error?: string
+			}>('/api/settings/cameras')
+			captureDevices.value = response.devices ?? []
+			if (typeof response.selected_index === 'number') {
+				settings.value.virtual_camera_index = response.selected_index
+			}
+			if (!response.success && response.error) {
+				configMessage.value = { tone: 'warning', message: response.error }
+			}
+		} catch (error) {
+			captureDevices.value = []
+			configMessage.value = {
+				tone: 'error',
+				message: error instanceof Error ? error.message : 'Failed to list capture devices.'
+			}
+		} finally {
+			loadingCaptureDevices.value = false
+		}
+	}
+
+	async function applyVirtualCameraIndex(index: number): Promise<void> {
+		settings.value.virtual_camera_index = index
+		try {
+			await apiPost<{ success?: boolean; message?: string }>('/api/settings/update-config', {
+				virtual_camera_index: index
+			})
+		} catch (error) {
+			configMessage.value = {
+				tone: 'error',
+				message: error instanceof Error ? error.message : 'Failed to apply camera index.'
+			}
+		}
+	}
+
+	async function applyHoughSettings(): Promise<void> {
+		const { hough_param1, hough_param2, min_radius, max_radius } = settings.value
+		if (
+			!Number.isFinite(hough_param1) ||
+			!Number.isFinite(hough_param2) ||
+			!Number.isFinite(min_radius) ||
+			!Number.isFinite(max_radius)
+		) {
+			return
+		}
+		try {
+			await apiPost<{ success?: boolean; message?: string }>('/api/settings/update-config', {
+				hough_param1: settings.value.hough_param1,
+				hough_param2: settings.value.hough_param2,
+				min_radius: settings.value.min_radius,
+				max_radius: settings.value.max_radius
+			})
+		} catch (error) {
+			configMessage.value = {
+				tone: 'error',
+				message: error instanceof Error ? error.message : 'Failed to apply detection settings.'
+			}
+		}
+	}
+
+	async function onVirtualCameraChange(event: Event): Promise<void> {
+		const target = event.target
+		if (!(target instanceof HTMLSelectElement)) return
+		const index = Number.parseInt(target.value, 10)
+		if (!Number.isFinite(index)) return
+		await applyVirtualCameraIndex(index)
 	}
 
 	async function saveConfig(): Promise<void> {
@@ -265,7 +346,12 @@ export function useSettings() {
 		selectedFilePath,
 		savingConfig,
 		runningAllTests,
+		captureDevices,
+		loadingCaptureDevices,
 		loadConfig,
+		loadCaptureDevices,
+		onVirtualCameraChange,
+		applyHoughSettings,
 		saveConfig,
 		testObs,
 		testVirtualCamera,

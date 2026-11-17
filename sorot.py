@@ -97,6 +97,39 @@ def _vue_build_ready():
     return os.path.isfile(os.path.join(DIST_DIR, 'index.html'))
 
 
+def _flask_debug_enabled():
+    """Local `dev.ps1` / `python sorot.py` default. Docker/Render set FLASK_DEBUG=0."""
+    return os.environ.get('FLASK_DEBUG', 'true').lower() in ('1', 'true', 'yes')
+
+
+def _vite_dev_pointer_page(title):
+    """HTML for local debug: do not serve stale static/dist (blank SPA)."""
+    html = (
+        '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
+        '<title>' + title + '</title></head>'
+        '<body style="font-family:system-ui,sans-serif;max-width:40rem;margin:2rem auto;'
+        'background:#212329;color:#e6e6e6">'
+        '<h1>SOROT</h1>'
+        '<p>In development the UI is Vite on port <strong>5173</strong>, not this API port.</p>'
+        '<p>Open <a id="vite-link" href="http://localhost:5173/" style="color:#61afef">'
+        'http://localhost:5173</a></p>'
+        '<p>From the repo root run <code>.\\dev.ps1</code>, then use 5173. '
+        'Port 5000 only serves a production bundle, which is often stale and looks blank.</p>'
+        '<script>'
+        '(function(){'
+        'var target="http://localhost:5173"+location.pathname+location.search+location.hash;'
+        'var link=document.getElementById("vite-link");'
+        'if(link)link.href=target;'
+        'fetch(target,{mode:"no-cors"}).then(function(){location.replace(target)}).catch(function(){});'
+        '})();'
+        '</script></body></html>'
+    )
+    return html, 200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store',
+    }
+
+
 @legacy_ui.route('/')
 def legacy_index():
     """Deprecated: main editor is the Vite app at /."""
@@ -154,6 +187,86 @@ def is_tobii_overlay_running():
 
 # Virtual camera
 VIRTUAL_CAMERA_INDEX = 0
+
+
+def _capture_api():
+    """Prefer DirectShow on Windows so indexes match the Settings device list."""
+    if os.name == 'nt' and hasattr(cv2, 'CAP_DSHOW'):
+        return cv2.CAP_DSHOW
+    return cv2.CAP_ANY
+
+
+def _open_virtual_camera(index=None):
+    """Open the configured overlay/virtual camera with a consistent backend."""
+    camera_index = VIRTUAL_CAMERA_INDEX if index is None else int(index)
+    cap = cv2.VideoCapture(camera_index, _capture_api())
+    if cap.isOpened():
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    return cap
+
+
+def _probe_capture_devices():
+    """Fallback list by opening indexes when named enumeration is unavailable."""
+    devices = []
+    api = _capture_api()
+    consecutive_misses = 0
+    for index in range(12):
+        cap = cv2.VideoCapture(index, api)
+        opened = cap.isOpened()
+        width = height = None
+        if opened:
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0) or None
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0) or None
+        cap.release()
+        if not opened:
+            consecutive_misses += 1
+            if consecutive_misses >= 2 and index >= 1:
+                break
+            continue
+        consecutive_misses = 0
+        label = f'Camera {index}'
+        if width and height:
+            label = f'{label} ({width}x{height})'
+        devices.append({'index': index, 'name': label})
+    return devices
+
+
+def _list_capture_devices():
+    """System cameras for Settings. Indexes match `_open_virtual_camera`."""
+    try:
+        from cv2_enumerate_cameras import enumerate_cameras
+
+        api = _capture_api()
+        devices = []
+        seen = set()
+        for info in enumerate_cameras(api):
+            index = int(getattr(info, 'index', -1))
+            if index < 0 or index in seen:
+                continue
+            seen.add(index)
+            name = str(getattr(info, 'name', '') or '').strip() or f'Camera {index}'
+            devices.append({'index': index, 'name': name})
+        if devices:
+            return devices
+    except Exception:
+        pass
+    return _probe_capture_devices()
+
+
+def _virtual_camera_label(index=None):
+    camera_index = VIRTUAL_CAMERA_INDEX if index is None else int(index)
+    for device in _list_capture_devices():
+        if device['index'] == camera_index:
+            return device['name']
+    return f'Camera {camera_index}'
+
+
+_live_gaze_lock = threading.Lock()
+_live_gaze_refs = 0
+_live_gaze_stop = threading.Event()
+_live_gaze_ready = threading.Event()
+_live_gaze_error = None
+_live_gaze_thread = None
 
 # Gaze detection params
 HOUGH_PARAM1 = 50
@@ -338,15 +451,23 @@ class OBSController:
 # GAZE DETECTION
 # ==============================================================================
 
-def detect_gaze_hough(frame):
-    """Detect gaze using Hough Circle Transform (adaptive radii)."""
+def detect_gaze_hough(frame, min_radius=None, max_radius=None):
+    """Detect gaze using Hough Circle Transform.
+
+    If min/max radius are omitted, radii scale with frame size (recording path).
+    Live overlay passes settings radii (already scaled if the frame was downsized).
+    """
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (7, 7), 1.5)
 
     h, w = gray.shape[:2]
-    base = int(min(w, h) * 0.035)
-    min_r = max(8, int(base * 0.6))
-    max_r = max(min_r + 6, int(base * 1.8))
+    if min_radius is None or max_radius is None:
+        base = int(min(w, h) * 0.035)
+        min_r = max(8, int(base * 0.6))
+        max_r = max(min_r + 6, int(base * 1.8))
+    else:
+        min_r = max(1, int(min_radius))
+        max_r = max(min_r + 1, int(max_radius))
     min_dist = max(30, int(min(w, h) * 0.25))
 
     circles = cv2.HoughCircles(
@@ -359,6 +480,72 @@ def detect_gaze_hough(frame):
         circle = np.uint16(np.around(circles[0, 0]))
         return (int(circle[0]), int(circle[1]))
     return None
+
+
+# Downscale before Hough so the live loop stays near camera FPS.
+LIVE_HOUGH_MAX_SIDE = 720
+
+
+def _create_gaze_kalman():
+    """Constant-velocity Kalman. Higher Q / lower R than the legacy test app so a circular path does not coast tangent then snap back."""
+    kalman = cv2.KalmanFilter(4, 2)
+    kalman.measurementMatrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0]], np.float32)
+    kalman.transitionMatrix = np.array(
+        [[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]],
+        np.float32,
+    )
+    kalman.processNoiseCov = np.array(
+        [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]],
+        np.float32,
+    ) * 0.12
+    kalman.measurementNoiseCov = np.array([[1, 0], [0, 1]], np.float32) * 2.5
+    return {
+        'filter': kalman,
+        'initialized': False,
+        'detection_count': 0,
+    }
+
+
+def _smooth_live_gaze(state, gaze_pos):
+    """Warm up 5 samples, then predict+correct. Returns the corrected state, not the pre-measurement prediction."""
+    state['detection_count'] += 1
+    if state['detection_count'] < 5:
+        return (int(round(gaze_pos[0])), int(round(gaze_pos[1])))
+    kalman = state['filter']
+    if not state['initialized']:
+        kalman.statePost = np.array(
+            [[float(gaze_pos[0])], [float(gaze_pos[1])], [0.0], [0.0]],
+            np.float32,
+        )
+        state['initialized'] = True
+    kalman.predict()
+    measurement = np.array([[float(gaze_pos[0])], [float(gaze_pos[1])]], np.float32)
+    estimated = kalman.correct(measurement)
+    return (int(round(estimated[0][0])), int(round(estimated[1][0])))
+
+
+def _detect_live_gaze(frame):
+    """Hough on a downscaled copy; coordinates mapped back to the original frame."""
+    height, width = frame.shape[:2]
+    work = frame
+    scale = 1.0
+    longest = max(height, width)
+    if longest > LIVE_HOUGH_MAX_SIDE:
+        scale = LIVE_HOUGH_MAX_SIDE / float(longest)
+        work = cv2.resize(
+            frame,
+            (max(1, int(round(width * scale))), max(1, int(round(height * scale)))),
+            interpolation=cv2.INTER_AREA,
+        )
+    min_r = max(1, int(round(MIN_RADIUS * scale)))
+    max_r = max(min_r + 1, int(round(MAX_RADIUS * scale)))
+    pos = detect_gaze_hough(work, min_r, max_r)
+    if pos is None:
+        return None
+    if scale != 1.0:
+        return (pos[0] / scale, pos[1] / scale)
+    return (float(pos[0]), float(pos[1]))
+
 
 def _get_normalized_rois():
     """Return ROIs normalized to [0,1] for the first scene (or empty)."""
@@ -416,6 +603,93 @@ def _map_gaze_to_video(gx, gy, src_w, src_h):
     y_scaled = max(0, min(dst_h - 1, y_scaled))
     return x_scaled, y_scaled
 
+
+def _live_gaze_loop():
+    """Read overlay/virtual camera and emit marker position for games + editor."""
+    global _live_gaze_error
+    cap = _open_virtual_camera()
+    if not cap.isOpened():
+        _live_gaze_error = f'Cannot open {_virtual_camera_label()} (index {VIRTUAL_CAMERA_INDEX})'
+        print(f'Live gaze: {_live_gaze_error}')
+        _live_gaze_ready.set()
+        return
+    _live_gaze_error = None
+    _live_gaze_ready.set()
+    print(f'Live gaze: streaming {_virtual_camera_label()} (index {VIRTUAL_CAMERA_INDEX})')
+    kalman_state = _create_gaze_kalman()
+    last_smoothed = None
+    last_emitted = None
+    try:
+        while not _live_gaze_stop.is_set():
+            ret, frame = cap.read()
+            if not ret:
+                _live_gaze_stop.wait(0.02)
+                continue
+            height, width = frame.shape[:2]
+            pos = _detect_live_gaze(frame)
+            emit_pos = None
+            if pos and 0 <= pos[0] <= width and 0 <= pos[1] <= height:
+                last_smoothed = _smooth_live_gaze(kalman_state, pos)
+                emit_pos = last_smoothed
+            if emit_pos and emit_pos != last_emitted:
+                last_emitted = emit_pos
+                socketio.emit('gaze_detected', {
+                    'x': int(emit_pos[0]),
+                    'y': int(emit_pos[1]),
+                    'frame_width': int(width),
+                    'frame_height': int(height),
+                })
+            _live_gaze_stop.wait(0.001)
+    finally:
+        cap.release()
+        print('Live gaze: stopped')
+
+
+def _start_live_gaze_locked():
+    global _live_gaze_refs, _live_gaze_thread, _live_gaze_error
+    _live_gaze_refs += 1
+    started_new = False
+    if _live_gaze_thread is None or not _live_gaze_thread.is_alive():
+        _live_gaze_stop.clear()
+        _live_gaze_ready.clear()
+        _live_gaze_error = None
+        _live_gaze_thread = threading.Thread(target=_live_gaze_loop, daemon=True)
+        _live_gaze_thread.start()
+        started_new = True
+    return _live_gaze_refs, started_new
+
+
+def _stop_live_gaze_locked():
+    global _live_gaze_refs
+    if _live_gaze_refs <= 0:
+        _live_gaze_refs = 0
+        return 0
+    _live_gaze_refs -= 1
+    if _live_gaze_refs == 0:
+        _live_gaze_stop.set()
+    return _live_gaze_refs
+
+
+def _restart_live_gaze_camera():
+    """Re-open the overlay camera after VIRTUAL_CAMERA_INDEX changes."""
+    global _live_gaze_thread, _live_gaze_error
+    with _live_gaze_lock:
+        if _live_gaze_refs <= 0:
+            return
+        _live_gaze_stop.set()
+        thread = _live_gaze_thread
+    if thread is not None and thread.is_alive():
+        thread.join(timeout=2.0)
+    with _live_gaze_lock:
+        if _live_gaze_refs <= 0:
+            return
+        _live_gaze_stop.clear()
+        _live_gaze_ready.clear()
+        _live_gaze_error = None
+        _live_gaze_thread = threading.Thread(target=_live_gaze_loop, daemon=True)
+        _live_gaze_thread.start()
+    _live_gaze_ready.wait(timeout=5)
+
 def find_roi_at_position(rois, x, y):
     """Find ROI containing position."""
     for roi in rois:
@@ -428,42 +702,29 @@ def find_roi_at_position(rois, x, y):
 # FLASK ROUTES
 # ==============================================================================
 
+@app.route('/health')
+def health():
+    """Lightweight health check for Render and other load balancers."""
+    return jsonify({
+        'status': 'ok',
+        'vue_build_ready': _vue_build_ready(),
+    })
+
+
 @app.route('/')
 def index():
-    """Serve the Vue production build, or a dev pointer if not built."""
-    if _vue_build_ready():
-        return send_from_directory(DIST_DIR, 'index.html')
-    return (
-        '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
-        '<title>SOROT</title></head><body style="font-family:system-ui,sans-serif;max-width:40rem;margin:2rem auto">'
-        '<h1>SOROT</h1>'
-        '<p>The Vue frontend is not built yet. For development, run:</p>'
-        '<pre>cd frontend &amp;&amp; npm install &amp;&amp; npm run dev</pre>'
-        '<p>Then open <a href="http://localhost:5173">http://localhost:5173</a> (API on port 5000).</p>'
-        '<p>Production / Docker: <code>cd frontend &amp;&amp; npm run build</code>, then reload this page.</p>'
-        '<p>System settings: <a href="/settings">/settings</a></p>'
-        '</body></html>',
-        200,
-        {'Content-Type': 'text/html; charset=utf-8'},
-    )
+    """Serve the Vue production build, or a Vite pointer during local debug."""
+    if _flask_debug_enabled() or not _vue_build_ready():
+        return _vite_dev_pointer_page('SOROT')
+    return send_from_directory(DIST_DIR, 'index.html')
 
 
 @app.route('/settings')
 def settings_page():
     """Serve Vue settings view (same SPA bundle as /)."""
-    if _vue_build_ready():
-        return send_from_directory(DIST_DIR, 'index.html')
-    return (
-        '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
-        '<title>SOROT Settings</title></head><body style="font-family:system-ui,sans-serif;max-width:40rem;margin:2rem auto">'
-        '<h1>SOROT Settings</h1>'
-        '<p>Run the Vite dev server for settings UI:</p>'
-        '<pre>cd frontend &amp;&amp; npm run dev</pre>'
-        '<p>Then open <a href="http://localhost:5173/settings">http://localhost:5173/settings</a></p>'
-        '</body></html>',
-        200,
-        {'Content-Type': 'text/html; charset=utf-8'},
-    )
+    if _flask_debug_enabled() or not _vue_build_ready():
+        return _vite_dev_pointer_page('SOROT Settings')
+    return send_from_directory(DIST_DIR, 'index.html')
 
 
 @app.route('/assets/<path:filename>')
@@ -526,7 +787,7 @@ def api_test_start():
     if test_state.active:
         return jsonify({'success': True})
     try:
-        test_state.gaze_cap = cv2.VideoCapture(VIRTUAL_CAMERA_INDEX)
+        test_state.gaze_cap = _open_virtual_camera()
         if not test_state.gaze_cap.isOpened():
             test_state.gaze_cap = None
             return jsonify({'success': False, 'error': 'Cannot open virtual camera'}), 500
@@ -2938,12 +3199,12 @@ def test_tobii_overlay():
 def test_virtual_camera():
     """Test if virtual camera is accessible."""
     try:
-        cap = cv2.VideoCapture(VIRTUAL_CAMERA_INDEX)
+        cap = _open_virtual_camera()
         if not cap.isOpened():
             return jsonify({
                 'success': False,
                 'error': 'Virtual camera not accessible',
-                'message': f'Cannot open camera index {VIRTUAL_CAMERA_INDEX}'
+                'message': f'Cannot open {_virtual_camera_label()} (index {VIRTUAL_CAMERA_INDEX})'
             })
         
         ret, frame = cap.read()
@@ -2959,8 +3220,9 @@ def test_virtual_camera():
         h, w = frame.shape[:2]
         return jsonify({
             'success': True,
-            'message': 'Virtual camera is working',
-            'resolution': f'{w}x{h}'
+            'message': f'{_virtual_camera_label()} is working',
+            'resolution': f'{w}x{h}',
+            'index': VIRTUAL_CAMERA_INDEX
         })
     except Exception as e:
         return jsonify({
@@ -2969,15 +3231,55 @@ def test_virtual_camera():
             'message': f'Error testing camera: {str(e)}'
         })
 
+@app.route('/api/gaze/live/start', methods=['POST'])
+def api_gaze_live_start():
+    """Start overlay/virtual-camera gaze streaming (ref-counted)."""
+    with _live_gaze_lock:
+        refs, started_new = _start_live_gaze_locked()
+    if started_new:
+        opened = _live_gaze_ready.wait(timeout=5)
+        error = _live_gaze_error
+        if not opened or error:
+            with _live_gaze_lock:
+                _live_gaze_refs = 0
+                _live_gaze_stop.set()
+            message = error or f'Timed out opening {_virtual_camera_label()} (index {VIRTUAL_CAMERA_INDEX})'
+            return jsonify({
+                'success': False,
+                'running': False,
+                'error': message,
+                'index': VIRTUAL_CAMERA_INDEX,
+            }), 503
+    return jsonify({
+        'success': True,
+        'running': True,
+        'refs': refs,
+        'camera': _virtual_camera_label(),
+        'index': VIRTUAL_CAMERA_INDEX,
+    })
+
+
+@app.route('/api/gaze/live/stop', methods=['POST'])
+def api_gaze_live_stop():
+    """Stop overlay gaze streaming when the last consumer leaves."""
+    with _live_gaze_lock:
+        refs = _stop_live_gaze_locked()
+    return jsonify({
+        'success': True,
+        'running': refs > 0,
+        'refs': refs,
+    })
+
+
 @app.route('/api/settings/test-gaze-detection', methods=['POST'])
 def test_gaze_detection():
     """Test gaze detection on current virtual camera frame."""
     try:
-        cap = cv2.VideoCapture(VIRTUAL_CAMERA_INDEX)
+        cap = _open_virtual_camera()
         if not cap.isOpened():
             return jsonify({
                 'success': False,
-                'error': 'Virtual camera not accessible'
+                'error': f'Cannot open {_virtual_camera_label()} (index {VIRTUAL_CAMERA_INDEX})'
             })
         
         ret, frame = cap.read()
@@ -2990,7 +3292,7 @@ def test_gaze_detection():
             })
         
         # Try detecting gaze
-        gaze_pos = detect_gaze_hough(frame)
+        gaze_pos = _detect_live_gaze(frame)
         
         if gaze_pos:
             fh, fw = frame.shape[:2]
@@ -3144,7 +3446,11 @@ def update_config():
     if 'obs_password' in data:
         OBS_PASSWORD = data['obs_password']
     if 'virtual_camera_index' in data:
-        VIRTUAL_CAMERA_INDEX = int(data['virtual_camera_index'])
+        new_index = int(data['virtual_camera_index'])
+        index_changed = new_index != VIRTUAL_CAMERA_INDEX
+        VIRTUAL_CAMERA_INDEX = new_index
+        if index_changed:
+            _restart_live_gaze_camera()
     if 'hough_param1' in data:
         HOUGH_PARAM1 = int(data['hough_param1'])
     if 'hough_param2' in data:
@@ -3201,6 +3507,26 @@ def update_config():
         }
     })
 
+@app.route('/api/settings/cameras', methods=['GET'])
+def list_cameras():
+    """List system capture devices. Indexes match overlay/virtual-camera capture."""
+    try:
+        devices = _list_capture_devices()
+        return jsonify({
+            'success': True,
+            'devices': devices,
+            'selected_index': VIRTUAL_CAMERA_INDEX,
+            'backend': 'dshow' if _capture_api() == getattr(cv2, 'CAP_DSHOW', None) else 'default',
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'devices': [],
+            'selected_index': VIRTUAL_CAMERA_INDEX,
+        })
+
+
 @app.route('/api/settings/get-config', methods=['GET'])
 def get_config():
     """Get current application configuration."""
@@ -3225,6 +3551,8 @@ def get_config():
 @app.route('/<path:filename>')
 def vite_public_files(filename):
     """Favicon and other files emitted to static/dist root by Vite."""
+    if filename.startswith('api/') or filename.startswith('socket.io'):
+        abort(404)
     if not _vue_build_ready():
         abort(404)
     safe_path = os.path.join(DIST_DIR, filename)
@@ -3238,17 +3566,22 @@ def vite_public_files(filename):
 # ==============================================================================
 
 if __name__ == '__main__':
+    _port = int(os.environ.get('PORT', '5000'))
+    _debug = _flask_debug_enabled()
     print("\n" + "=" * 80)
     print("Starting Flask server...")
-    print("Open browser: http://localhost:5000")
+    if _debug:
+        print("UI:  http://localhost:5173  (open this — Vite frontend)")
+        print(f"API: http://localhost:{_port}")
+    else:
+        print(f"Open browser: http://localhost:{_port}")
     print("=" * 80 + "\n")
     
     # Local dev runner: Flask-SocketIO blocks Werkzeug unless explicitly allowed.
-    _debug = os.environ.get('FLASK_DEBUG', 'true').lower() in ('1', 'true', 'yes')
     socketio.run(
         app,
         host='0.0.0.0',
-        port=5000,
+        port=_port,
         debug=_debug,
         use_reloader=False,
         allow_unsafe_werkzeug=True,

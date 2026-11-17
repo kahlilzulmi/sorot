@@ -1992,7 +1992,7 @@ body {
     flex-wrap: wrap;
     gap: 8px;
     justify-content: center;
-    margin: 8px 0 18px 0;
+    margin: 64px 0 18px 0;
 }
 
 .health-pill {

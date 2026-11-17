@@ -1,6 +1,6 @@
 <template>
 	<div class="math-tf">
-		<header class="math-tf__header">
+		<header class="math-tf__header" data-session-chrome>
 			<button type="button" class="btn btn-secondary btn-sm" @click="$emit('back')">
 				← Games hub
 			</button>
@@ -68,13 +68,13 @@
 				>
 					Game berikutnya
 				</button>
-				<button type="button" class="btn btn-secondary" @click="$emit('back')">
+				<button type="button" class="btn btn-secondary" data-session-chrome @click="$emit('back')">
 					Kembali ke hub
 				</button>
 			</div>
 		</div>
 
-		<p class="math-tf__hint">Soal persamaan matematika benar atau salah — dwell Benar / Salah.</p>
+		<p class="math-tf__hint" data-session-chrome>Soal persamaan matematika benar atau salah — dwell Benar / Salah.</p>
 	</div>
 </template>
 

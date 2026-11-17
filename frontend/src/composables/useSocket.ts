@@ -6,6 +6,8 @@ export interface GazeDetectedPayload {
 	y: number
 	frame?: number
 	timestamp?: number
+	frame_width?: number
+	frame_height?: number
 }
 
 export function useSocket() {
@@ -13,7 +15,10 @@ export function useSocket() {
 	let socket: Socket | null = null
 
 	function connect(): void {
-		if (socket?.connected) return
+		if (socket) {
+			if (!socket.connected) socket.connect()
+			return
+		}
 		socket = io({
 			path: '/socket.io',
 			transports: ['websocket', 'polling']

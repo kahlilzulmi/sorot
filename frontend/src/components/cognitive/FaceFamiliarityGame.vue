@@ -1,6 +1,6 @@
 <template>
 	<div class="face-fam">
-		<header class="face-fam__header">
+		<header class="face-fam__header" data-session-chrome>
 			<button type="button" class="btn btn-secondary btn-sm" @click="$emit('back')">
 				← Games hub
 			</button>
@@ -85,13 +85,13 @@
 				>
 					Game berikutnya
 				</button>
-				<button type="button" class="btn btn-secondary" @click="$emit('back')">
+				<button type="button" class="btn btn-secondary" data-session-chrome @click="$emit('back')">
 					Kembali ke hub
 				</button>
 			</div>
 		</div>
 
-		<p class="face-fam__hint">
+		<p class="face-fam__hint" data-session-chrome>
 			Memilih gambar yang asli vs AI-generated — dwell salah satu wajah. Upload foto di
 			pengaturan modul (ikon gear di hub).
 		</p>

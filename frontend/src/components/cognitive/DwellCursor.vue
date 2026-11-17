@@ -6,7 +6,8 @@
 			`dwell-cursor--effect-${dwellEffect}`,
 			{
 				'dwell-cursor--dwelling': dwelling,
-				'dwell-cursor--embedded': embedded
+				'dwell-cursor--embedded': embedded,
+				'dwell-cursor--contained': contained
 			}
 		]"
 		:style="cursorStyle"
@@ -73,11 +74,13 @@ const props = withDefaults(
 		dwelling: boolean
 		cursorSizePx?: number
 		dwellEffectSizePx?: number
+		contained?: boolean
 		embedded?: boolean
 	}>(),
 	{
 		cursorSizePx: 36,
 		dwellEffectSizePx: 36,
+		contained: false,
 		embedded: false
 	}
 )
@@ -133,6 +136,11 @@ const cursorStyle = computed(() => {
 	z-index: 12000;
 	pointer-events: none;
 	will-change: transform;
+}
+
+.dwell-cursor--contained {
+	position: absolute;
+	z-index: 3;
 }
 
 .dwell-cursor--embedded {

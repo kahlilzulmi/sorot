@@ -9,6 +9,7 @@
 		:gaze-source-label="gazeSourceLabel"
 		:last-gaze-at="lastGazeAt"
 		@select-mode="onSelectMode"
+		@open-settings="openSettings"
 	/>
 
 	<div v-else class="app-shell" :class="{ 'app-shell--cognitive-fullscreen': cognitiveInGame }">
@@ -259,6 +260,7 @@ import { usePostProcessing } from './composables/usePostProcessing'
 import { useDualVideo } from './composables/useDualVideo'
 import { useGazeDevices } from './composables/useGazeDevices'
 import { useGazePersistence } from './composables/useGazePersistence'
+import { useWebGazer } from './composables/useWebGazer'
 
 const workspace = useWorkspaceState()
 const { modeTitle } = workspace
@@ -346,6 +348,8 @@ const gazeSession = useGazeSession(currentTime)
 const { currentOverlaySample, revision: gazeRevision } = gazeSession
 const gazeDevices = useGazeDevices()
 const gazePersistence = useGazePersistence(gazeSession, videoInfoRef)
+const webGazer = useWebGazer()
+let webGazerUnsubscribe: (() => void) | null = null
 const importMode = useImportMode(
 	videoInfoRef,
 	(payload) => {
@@ -379,13 +383,26 @@ const hasImportedGaze = computed(() => gazeSession.importedGaze.value.length > 0
 const hasAnyRoi = computed(() => workspace.state.scenes.some((scene) => scene.rois.length > 0))
 const backendReady = computed(() => !!videoInfoRef.value || workspace.state.statusMessage !== 'Ready')
 const gazeSourceLabel = computed(() => {
-	const deviceName = gazeDevices.selectedDevice.value.name
+	const device = gazeDevices.selectedDevice.value
 	if (gazeSession.importedGaze.value.length > 0) return 'Imported gaze loaded'
-	if (socket.connected.value) return `Live gaze · ${deviceName}`
-	return `${deviceName} (standby)`
+	if (device.transport === 'webgazer') {
+		if (webGazer.status.value === 'running') return `Live gaze · ${device.name}`
+		if (webGazer.status.value === 'starting') return `Starting ${device.name}…`
+		if (webGazer.status.value === 'error') {
+			return `${device.name} (${webGazer.errorMessage.value ?? 'failed'})`
+		}
+	}
+	if (
+		(device.transport === 'tobii_overlay' || device.transport === 'virtual_camera') &&
+		socket.connected.value
+	) {
+		return `Live gaze · ${device.name}`
+	}
+	return `${device.name} (standby)`
 })
 
 function handleGazeDetected(payload: { x: number; y: number }): void {
+	if (gazeDevices.selectedDevice.value.transport === 'webgazer') return
 	gazeSession.pushLiveGaze(payload.x, payload.y)
 	lastGazeAt.value = new Date().toLocaleTimeString()
 }
@@ -656,7 +673,30 @@ onBeforeUnmount(() => {
 		window.removeEventListener('popstate', onPopState)
 	}
 	socket.offGazeDetected(handleGazeDetected)
+	webGazerUnsubscribe?.()
+	webGazerUnsubscribe = null
+	webGazer.shutdown()
 })
+
+watch(
+	() => gazeDevices.selectedDevice.value.transport,
+	async (transport) => {
+		webGazerUnsubscribe?.()
+		webGazerUnsubscribe = null
+
+		if (transport !== 'webgazer') {
+			webGazer.shutdown()
+			return
+		}
+
+		webGazerUnsubscribe = webGazer.onGaze((x, y) => {
+			gazeSession.pushLiveGaze(x, y)
+			lastGazeAt.value = new Date().toLocaleTimeString()
+		})
+		await webGazer.start()
+	},
+	{ immediate: true }
+)
 
 function onPopState(): void {
 	appView.value = readInitialAppView()

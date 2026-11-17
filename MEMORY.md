@@ -51,6 +51,16 @@
 - What was rejected and why: Single Tobii-only settings card and immediate backend SDK integrations — deferred to Phase 2–4.
 - Phases planned: (2) persist `gaze_device_id` in backend config, (3) route live gaze by transport (mouse, overlay, WebGazer), (4) custom device pipeline hooks.
 
+## 2026-08-24 — WebGazer.js live gaze (Phase 3)
+- What was decided: Add `webgazer` npm dependency + `useWebGazer.ts` singleton (ref-counted start/stop, dynamic import, hidden preview). Wire into `useGazePoint` for cognitive games and `App.vue` for editor overlay when Settings device transport is `webgazer`. Device test starts WebGazer and reports success/failure.
+- Why: User asked to finish the WebGazer.js phase (gaze device routing Phase 3).
+- What was rejected and why: Separate gaze source picker in cognitive settings (already removed); loading WebGazer on every page load (lazy import on first use instead).
+
+## 2026-08-24 — WebGazer hardening + mode selector settings
+- What was decided: Alias Vite to `webgazer/dist/webgazer.js` (fixes `(void 0) is not a constructor` from raw ESM src). Add `shutdown()` (`stopVideo` + `end`, ref-count reset) when device transport ≠ `webgazer`. Device test no longer starts camera separately. Mode selector gets Settings button → `/settings`.
+- Why: User reported constructor error, webcam staying on when deselected, and wanted settings access from mode select.
+- What was rejected and why: Keeping `optimizeDeps.include` for webgazer src (caused broken constructor interop).
+
 ## 2026-08-23 — Cognitive hub mouse + math modules
 - What was decided: Games hub uses normal mouse (no hide-OS-cursor / no dwell cursor). Dwell + eye-tracker cursor only after entering a game. Catalog includes UFYP math modules: `math-true-false` (Benar/Salah) and `math-fill-blank` (2×2 grid), ahead of Face / Visual Search / Memory.
 - Why: Hub is navigation, not an eye-tracked trial; math games were in the reference set but missing from Phase 1 catalog.
@@ -173,3 +183,43 @@
 - What was decided: Host full SOROT stack on **Render** as a Docker Web Service (not Netlify). One container serves Vue + Flask + Socket.IO on port 5000.
 - Why: User chose Approach 3 (single Docker host) and specified Render.
 - What was rejected and why: Netlify frontend-only (Approach 1); Netlify + separate API (Approach 2) — Socket.IO split is fragile.
+
+## 2026-08-24 — Render-ready hardening
+- What was decided: `sorot.py` reads `PORT` env (Render injects it); add `GET /health` JSON endpoint; repo root `render.yaml` Blueprint (Docker, `healthCheckPath: /health`, `FLASK_DEBUG=0`, generated secret); document Render deploy + limits in `docs/development.md`.
+- Why: User chose phase 1 (Render-ready hardening) after picking Render hosting.
+- What was rejected and why: Persistent disk wiring in this pass (deferred to phase 3); Netlify split hosting.
+
+## 2026-09-09 — Blank mode selector with `dev.ps1`
+- What was decided: In `FLASK_DEBUG` (local default), Flask `/` and `/settings` must not serve `static/dist`. Return a pointer page that redirects to Vite `:5173` when it is up. Startup banner prints UI `:5173` and API `:5000`.
+- Why: `dev.ps1` starts both servers, but Flask advertised `:5000`. That port served a stale Aug 23 production SPA (`index-CjiLtnkh.js`) that mounted Vue as an empty comment (`<!---->`), so the mode selector looked blank. Current source on `:5173` renders correctly.
+- What was rejected and why: Rebuilding `static/dist` as the local fix (no HMR, goes stale again); reverse-proxying Vite through Flask (more moving parts). Production/Docker with `FLASK_DEBUG=0` still serves `static/dist`.
+
+## 2026-09-09 — System camera pickers (Approach 2)
+- What was decided: Two separate capture pickers. Overlay/virtual camera uses backend OpenCV list (`GET /api/settings/cameras`, DirectShow indexes, `cv2-enumerate-cameras` with probe fallback) and replaces the numeric index in Settings. WebGazer uses `navigator.mediaDevices.enumerateDevices()` and `setCameraConstraints({ deviceId })`, persisted as `sorot.webgazerCameraId`. Selecting an overlay camera applies `virtual_camera_index` immediately so tests use it without waiting for Save.
+- Why: Index 0 is usually the laptop webcam; overlay and browser camera IDs are not the same namespace.
+- What was rejected and why: Overlay-only picker (Approach 1); name-based auto-prefer OBS/Tobii (Approach 3).
+
+## 2026-09-09 — Overlay gaze wired into cognitive games
+- What was decided: Backend ref-counted live loop (`/api/gaze/live/start|stop`) reads the selected overlay camera, runs Hough marker detection, and emits `gaze_detected` with frame size. Games map that to the viewport and drive `DwellCursor` / dwell-click when Gaze Input Device is Tobii overlay or virtual camera. Changing `virtual_camera_index` restarts the live capture thread so a new camera is used immediately. Only one Flask process may bind `:5000`; a stale instance made `POST /api/gaze/live/start` return 405 via the GET-only `vite_public_files` catch-all.
+- Why: User wants to play with a real eye tracker. Overlay samples previously never reached `useGazePoint` (and the server never emitted `gaze_detected`).
+- What was rejected and why: Polling `/api/gaze` (needs a separate test capture session). Sharing App.vue’s socket instance (extra coupling); a second Socket.IO client in `useGazePoint` is enough. Name-based auto-prefer of OBS on Flask restart (still in-memory index; user re-selects overlay camera after backend restart).
+
+## 2026-09-09 — Overlay gaze Kalman + display lerp
+- What was decided: Port the legacy 4-state `cv2.KalmanFilter` (warmup 5 frames, processNoise 0.03, measurementNoise 5.0) into `_live_gaze_loop`. Emit Kalman-smoothed pixels on hit; on Hough miss emit last smoothed point. Games additionally lerp the dwell cursor toward each sample at display rate (`OVERLAY_LERP = 0.4` in `useGazePoint`).
+- Why: User chose both. Raw Hough + silent misses made the in-game cursor hitch. The old smoother lived only in `legacy/tests/test_roi_gaze_webapp.py`.
+- What was rejected and why: Backend-only or frontend-only (user asked for both). A second Kalman on the client (double lag). Capture-buffer / 15ms-sleep changes were deferred, then done in the snap-back pass below.
+
+## 2026-09-09 — Overlay snap-back (circle test)
+- What was decided: Live loop uses camera buffer size 1, Hough on a max-720px frame, and ~1ms wait instead of 15ms. Kalman emits `correct()` (not the pre-measurement prediction), with processNoise 0.12 and measurementNoise 2.5 so a circular path does not coast tangent then rewind. Duplicate last-known emits on Hough miss are skipped. The game cursor interpolates the last segment over 24–70ms and drops short reverse snaps (25–140px against recent velocity).
+- Why: User confirmed a window-filling circular marker video. The glyph looked smooth but jumped back — constant-velocity predict-ahead plus a stale capture queue.
+- What was rejected and why: Rejecting every reverse (breaks saccades back to the equation list). A second client Kalman.
+
+## 2026-09-09 — Settings live gaze check
+- What was decided: Settings opens with a black full-height preview (left) and a side panel (right) for overlay camera + Hough param1/2 + min/max radius. Changing those POSTs `/api/settings/update-config` immediately (250ms debounce). The live loop reads those globals each frame (radii scaled with the 720px Hough copy). Cursor is mapped to the stage, not the full window.
+- Why: User wants to tune detection in real time against the circle overlay video without entering a game.
+- What was rejected and why: Kalman Q/R sliders in this pass (Hough/camera only). Adaptive live radii (settings radii now drive the overlay path so the panel does something).
+
+## 2026-09-09 — Cognitive play: fullscreen, focus, debug
+- What was decided: Play (single or playlist) calls `requestFullscreen` on the game shell (CSS fullscreen remains if the browser blocks it). Hub + **S** expose Focus vs Debug (`playView` in cognitive settings). Focus hides `[data-session-chrome]` (hub back, titles/scores, hints). Debug keeps chrome and shows processed dwell cursor plus raw overlay sample (cyan ring) and a HUD (viewport processed/raw, camera pixels when overlay). Hotkey **d** toggles. **q** still leaves the game.
+- Why: User wants an immersive play path and a debug path with raw vs Kalman/lerp positions.
+- What was rejected and why: Fullscreen on the hub. Hiding gameplay targets (Benar/Salah, grids) in focus. A separate localStorage key (stored with existing cursor settings).

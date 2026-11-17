@@ -16,6 +16,9 @@ export type DwellCursorShape = GazeCursorShape
 
 export type GazeInputSourceId = 'mouse' | 'socket' | 'tobii-overlay' | 'webgazer'
 
+/** In-game chrome: focus hides hub/hints; debug shows raw vs processed gaze. */
+export type CognitivePlayView = 'focus' | 'debug'
+
 export interface CognitiveGameDefinition {
 	id: CognitiveGameId
 	name: string
@@ -37,6 +40,7 @@ export interface CognitiveCursorSettings {
 	dwellEffectSizePx: number
 	dwellMs: number
 	gazeSource: GazeInputSourceId
+	playView: CognitivePlayView
 }
 
 export interface CognitivePlaylistSettings {
@@ -101,7 +105,8 @@ export const DEFAULT_COGNITIVE_CURSOR: CognitiveCursorSettings = {
 	cursorSizePx: 36,
 	dwellEffectSizePx: 36,
 	dwellMs: 1000,
-	gazeSource: 'mouse'
+	gazeSource: 'mouse',
+	playView: 'debug'
 }
 
 export const DEFAULT_COGNITIVE_PLAYLIST: CognitivePlaylistSettings = {
@@ -204,6 +209,7 @@ export function normalizeCursorSettings(
 		dwellEffectSizePx: clampCursorSizePx(
 			Number(parsed.dwellEffectSizePx) || DEFAULT_COGNITIVE_CURSOR.dwellEffectSizePx
 		),
-		dwellMs: Math.max(200, Number(parsed.dwellMs) || DEFAULT_COGNITIVE_CURSOR.dwellMs)
+		dwellMs: Math.max(200, Number(parsed.dwellMs) || DEFAULT_COGNITIVE_CURSOR.dwellMs),
+		playView: parsed.playView === 'focus' ? 'focus' : 'debug'
 	}
 }

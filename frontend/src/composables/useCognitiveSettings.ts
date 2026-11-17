@@ -13,6 +13,7 @@ import {
 	type CognitiveGameId,
 	type CognitiveGameSettingsMap,
 	type CognitivePlaylistSettings,
+	type CognitivePlayView,
 	type DwellEffectStyle,
 	type GazeCursorShape,
 	type GazeInputSourceId
@@ -179,6 +180,10 @@ export function useCognitiveSettings() {
 		cursor.gazeSource = source
 	}
 
+	function setPlayView(view: CognitivePlayView): void {
+		cursor.playView = view
+	}
+
 	function dwellMsForGame(gameId: CognitiveGameId | null): number {
 		if (!gameId) return cursor.dwellMs
 		return gameSettings[gameId]?.dwellMs ?? cursor.dwellMs
@@ -290,6 +295,7 @@ export function useCognitiveSettings() {
 		setDwellEffectSizePx,
 		setDwellMs,
 		setGazeSource,
+		setPlayView,
 		dwellMsForGame,
 		setGameDwellMs,
 		openGameSettings,

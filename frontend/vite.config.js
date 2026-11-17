@@ -22,7 +22,9 @@ export default defineConfig({
   resolve: {
 	alias: {
 	  // Needed when Vue templates are compiled at runtime from DOM/template files
-	  vue: 'vue/dist/vue.esm-bundler.js'
+	  vue: 'vue/dist/vue.esm-bundler.js',
+	  // Pre-built bundle avoids Vite ESM breakage in webgazer src (constructor errors).
+	  webgazer: path.resolve(__dirname, 'node_modules/webgazer/dist/webgazer.js')
 	}
   },
   build: {
@@ -32,5 +34,8 @@ export default defineConfig({
 	rollupOptions: {
 	  input: path.resolve(__dirname, 'index.html'),
 	}
+  },
+  optimizeDeps: {
+	exclude: ['webgazer']
   }
 })

@@ -28,6 +28,38 @@ Copy `.env.example` to `.env` and set `FLASK_SECRET_KEY` before any shared or pr
 |----------|---------|---------|
 | `FLASK_SECRET_KEY` | dev placeholder | Session signing |
 | `FLASK_DEBUG` | `true` locally, `0` in Docker | Flask debug mode |
+| `PORT` | `5000` | HTTP port (`sorot.py`); Render injects this automatically |
+
+## Deploy on Render (Docker)
+
+Full stack on one Web Service — Vue UI, Flask API, and Socket.IO.
+
+### Option A — Blueprint (`render.yaml`)
+
+1. Push this repo (includes `render.yaml` on `dev`).
+2. Render dashboard → **New** → **Blueprint** → connect the repo.
+3. Set `FLASK_SECRET_KEY` if not using `generateValue: true`.
+4. Deploy; open the `*.onrender.com` URL.
+
+### Option B — Manual Web Service
+
+| Setting | Value |
+|---------|-------|
+| Runtime | **Docker** |
+| Dockerfile path | `./Dockerfile` |
+| Branch | `dev` or `main` |
+| Health check path | `/health` |
+| `FLASK_SECRET_KEY` | long random string |
+| `FLASK_DEBUG` | `0` |
+
+Do **not** hard-code port `5000` in Render — the platform sets `PORT`; `sorot.py` reads it.
+
+### Render limits to know
+
+- **Free tier:** service sleeps after idle; first request may take 30–60s (cold start).
+- **Ephemeral disk:** uploads, sessions, and projects are lost on redeploy unless you add a [Render disk](https://render.com/docs/disks) (paid).
+- **OBS / Tobii:** run on the researcher’s local machine; use Import mode on the hosted instance for remote work.
+- **Socket.IO:** works on a single Render Web Service; avoid splitting frontend and API across hosts.
 
 ## Useful commands
 

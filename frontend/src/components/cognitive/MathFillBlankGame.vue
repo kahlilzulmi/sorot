@@ -1,6 +1,6 @@
 <template>
 	<div class="math-fb">
-		<header class="math-fb__header">
+		<header class="math-fb__header" data-session-chrome>
 			<button type="button" class="btn btn-secondary btn-sm" @click="$emit('back')">
 				← Games hub
 			</button>
@@ -61,13 +61,13 @@
 				>
 					Game berikutnya
 				</button>
-				<button type="button" class="btn btn-secondary" @click="$emit('back')">
+				<button type="button" class="btn btn-secondary" data-session-chrome @click="$emit('back')">
 					Kembali ke hub
 				</button>
 			</div>
 		</div>
 
-		<p class="math-fb__hint">Soal persamaan matematika isi yang kosong — dwell kotak angka.</p>
+		<p class="math-fb__hint" data-session-chrome>Soal persamaan matematika isi yang kosong — dwell kotak angka.</p>
 	</div>
 </template>
 

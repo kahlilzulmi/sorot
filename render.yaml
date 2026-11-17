@@ -1,0 +1,16 @@
+# Render Blueprint — full SOROT stack (Vue + Flask + Socket.IO)
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: sorot
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    branch: dev
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: FLASK_DEBUG
+        value: "0"

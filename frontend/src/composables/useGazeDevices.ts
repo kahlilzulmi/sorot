@@ -12,6 +12,7 @@ import {
 	type GazeDeviceCategory,
 	type GazeDeviceDefinition
 } from '../types/gazeDevice'
+import { useWebGazer } from './useWebGazer'
 
 type DeviceFilter = 'all' | GazeDeviceCategory
 
@@ -173,12 +174,30 @@ async function testSelectedDevice(): Promise<void> {
 			case 'virtual_camera':
 				result = await testVirtualCameraOnly()
 				break
-			case 'webgazer':
+			case 'webgazer': {
+				const webGazer = useWebGazer()
+				if (webGazer.status.value === 'running' && webGazer.isReady()) {
+					result = {
+						tone: 'success',
+						message:
+							'WebGazer is running. Move the mouse briefly to improve calibration accuracy.'
+					}
+					break
+				}
+				if (webGazer.status.value === 'error') {
+					result = {
+						tone: 'error',
+						message: webGazer.errorMessage.value ?? 'WebGazer failed to start.'
+					}
+					break
+				}
 				result = {
 					tone: 'warning',
-					message: 'WebGazer webcam tracking is planned for Phase 3. Select mouse or overlay device meanwhile.'
+					message:
+						'WebGazer activates when this device is selected. Allow webcam access when prompted.'
 				}
 				break
+			}
 			case 'import_only':
 				result = {
 					tone: 'warning',

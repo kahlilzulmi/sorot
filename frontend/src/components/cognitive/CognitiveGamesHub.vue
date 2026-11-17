@@ -2,13 +2,27 @@
 	<div class="cog-hub">
 		<header class="cog-hub__header">
 			<h1>Cognitive Games</h1>
-			<p>
-				Check games to include, drag the handle or use ↑↓ to reorder, then play the playlist
-				or open a single module. Mouse only on this screen — dwell starts in-game.
-			</p>
 		</header>
 
 		<section class="cog-hub__actions">
+			<div class="cog-hub__view">
+				<button
+					type="button"
+					class="btn btn-secondary btn-sm"
+					:class="{ 'cog-hub__view-btn--active': cursor.playView === 'focus' }"
+					@click="setPlayView('focus')"
+				>
+					Focus view
+				</button>
+				<button
+					type="button"
+					class="btn btn-secondary btn-sm"
+					:class="{ 'cog-hub__view-btn--active': cursor.playView === 'debug' }"
+					@click="setPlayView('debug')"
+				>
+					Debug view
+				</button>
+			</div>
 			<button
 				type="button"
 				class="btn btn-primary"
@@ -18,7 +32,7 @@
 				Play in order ({{ enabledCount }})
 			</button>
 			<button type="button" class="btn btn-secondary" @click="$emit('open-settings')">
-				Cursor settings (S)
+				Game Settings
 			</button>
 		</section>
 
@@ -88,20 +102,6 @@
 				<div class="cog-game-card__body">
 					<strong>{{ game.name }}</strong>
 					<span class="cog-game-card__desc">{{ game.description }}</span>
-					<label class="cog-game-card__dwell">
-						<span>Dwell</span>
-						<input
-							:value="dwellMsForGame(game.id)"
-							class="cog-game-card__dwell-input"
-							type="number"
-							min="200"
-							step="100"
-							title="Dwell time in milliseconds"
-							@change="onCardDwellChange(game.id, $event)"
-							@click.stop
-						>
-						<span>ms</span>
-					</label>
 				</div>
 
 				<div class="cog-game-card__controls">
@@ -131,7 +131,9 @@
 			:game-id="gameSettingsOpenId"
 		/>
 
-		<p class="cog-hub__hint">Operator: <kbd>q</kbd> leave mode · <kbd>s</kbd> cursor settings</p>
+		<p class="cog-hub__hint">
+			Operator: <kbd>q</kbd> hub · <kbd>s</kbd> cursor settings · <kbd>d</kbd> focus/debug · Play goes fullscreen
+		</p>
 	</div>
 </template>
 
@@ -151,6 +153,8 @@ defineEmits<{
 const {
 	games,
 	enabledCount,
+	cursor,
+	setPlayView,
 	isGameEnabled,
 	toggleGameEnabled,
 	moveGame,
@@ -279,6 +283,18 @@ function onDragEnd(): void {
 	flex-wrap: wrap;
 	gap: 10px;
 	margin: 20px 0 16px;
+	align-items: center;
+}
+
+.cog-hub__view {
+	display: flex;
+	gap: 6px;
+	margin-right: 8px;
+}
+
+.cog-hub__view-btn--active {
+	border-color: var(--color-accent) !important;
+	color: var(--color-accent) !important;
 }
 
 .cog-hub__list {
